@@ -24,7 +24,7 @@ func (sym *Symbol) String() string {
 
 // Size returns the size of the symbol in bytes.
 func (sym *Symbol) Size() int {
-	return binary.Size(*sym.Hdr) + sym.Body.Size()
+	return binary.Size(*sym.Hdr) + sym.Body.BodySize()
 }
 
 // A SymbolHeader is a PS1 symbol header.
@@ -42,8 +42,8 @@ func (hdr *SymbolHeader) String() string {
 
 // SymbolBody is the sum-type of all symbol bodies.
 type SymbolBody interface {
-	// Size returns the size of the symbol body in bytes.
-	Size() int
+	// BodySize returns the size of the symbol body in bytes.
+	BodySize() int
 }
 
 // parseSymbol parses and returns a PS1 symbol.
@@ -83,6 +83,8 @@ func parseSymbolBody(r io.Reader, kind Kind) (SymbolBody, error) {
 		return body, nil
 	}
 	switch kind {
+	case KindDef:
+		return parse(&Def{})
 	case KindOverlay:
 		return parse(&Overlay{})
 	default:
@@ -90,8 +92,42 @@ func parseSymbolBody(r io.Reader, kind Kind) (SymbolBody, error) {
 	}
 }
 
-// An Overlay specifies the length and id of an file overlay (e.g. a shared
-// library).
+// --- [ 0x94 ] ----------------------------------------------------------------
+
+// A Def symbol specifies the class, type, size and name of a definition.
+//
+// Value of the symbol header specifies TODO.
+type Def struct {
+	// Definition class.
+	Class Class `struc:"uint16,little"`
+	// Definition type.
+	Type Type `struc:"uint16,little"`
+	// Definition size.
+	Size uint32 `struc:"uint32,little"`
+	// Name length.
+	Len uint8 `struc:"uint8,little,sizeof=Name"`
+	// Definition name,
+	Name string
+}
+
+// String returns the string representation of the definition symbol.
+func (body *Def) String() string {
+	return fmt.Sprintf("class %v type %v size %v name %v", body.Class, body.Type, body.Size, body.Name)
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *Def) BodySize() int {
+	size, err := struc.Sizeof(*body)
+	if err != nil {
+		panic(err)
+	}
+	return size
+}
+
+// --- [ 0x98 ] ----------------------------------------------------------------
+
+// An Overlay symbol specifies the length and id of an file overlay (e.g. a
+// shared library).
 //
 // Value of the symbol header specifies the base address at which the overlay is
 // loaded.
@@ -107,7 +143,7 @@ func (body *Overlay) String() string {
 	return fmt.Sprintf("length $%08x id $%x", body.Length, body.ID)
 }
 
-// Size returns the size of the symbol body in bytes.
-func (body *Overlay) Size() int {
+// BodySize returns the size of the symbol body in bytes.
+func (body *Overlay) BodySize() int {
 	return binary.Size(*body)
 }

@@ -4,14 +4,18 @@ package sym
 
 import "strconv"
 
-const _Kind_name = "overlay"
-
-var _Kind_index = [...]uint8{0, 7}
+const (
+	_Kind_name_0 = "94 Def"
+	_Kind_name_1 = "overlay"
+)
 
 func (i Kind) String() string {
-	i -= 152
-	if i >= Kind(len(_Kind_index)-1) {
-		return "Kind(" + strconv.FormatInt(int64(i+152), 10) + ")"
+	switch {
+	case i == 148:
+		return _Kind_name_0
+	case i == 152:
+		return _Kind_name_1
+	default:
+		return "Kind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _Kind_name[_Kind_index[i]:_Kind_index[i+1]]
 }
