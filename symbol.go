@@ -62,7 +62,6 @@ func parseSymbol(r io.Reader) (*Symbol, error) {
 		return sym, errors.WithStack(err)
 	}
 	sym.Body = body
-
 	return sym, nil
 }
 

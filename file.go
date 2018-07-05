@@ -91,7 +91,6 @@ func Parse(r io.Reader) (*File, error) {
 		}
 		f.Syms = append(f.Syms, sym)
 	}
-
 	return f, nil
 }
 
