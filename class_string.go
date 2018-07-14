@@ -5,16 +5,30 @@ package sym
 import "strconv"
 
 const (
-	_Class_name_0 = "STRTAG"
-	_Class_name_1 = "TPDEF"
+	_Class_name_0 = "MOS"
+	_Class_name_1 = "STRTAG"
+	_Class_name_2 = "TPDEF"
+	_Class_name_3 = "ENTAGMOE"
+	_Class_name_4 = "EOS"
+)
+
+var (
+	_Class_index_3 = [...]uint8{0, 5, 8}
 )
 
 func (i Class) String() string {
 	switch {
-	case i == 10:
+	case i == 8:
 		return _Class_name_0
-	case i == 13:
+	case i == 10:
 		return _Class_name_1
+	case i == 13:
+		return _Class_name_2
+	case 15 <= i && i <= 16:
+		i -= 15
+		return _Class_name_3[_Class_index_3[i]:_Class_index_3[i+1]]
+	case i == 102:
+		return _Class_name_4
 	default:
 		return "Class(" + strconv.FormatInt(int64(i), 10) + ")"
 	}

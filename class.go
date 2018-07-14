@@ -7,6 +7,10 @@ type Class uint16
 
 // Definition classes.
 const (
-	ClassStructTag Class = 0x000A // STRTAG
-	ClassTypedef   Class = 0x000D // TPDEF
+	ClassMOS    Class = 0x0008 // MOS
+	ClassSTRTAG Class = 0x000A // STRTAG
+	ClassTPDEF  Class = 0x000D // TPDEF
+	ClassENTAG  Class = 0x000F // ENTAG
+	ClassMOE    Class = 0x0010 // MOE
+	ClassEOS    Class = 0x0066 // EOS
 )

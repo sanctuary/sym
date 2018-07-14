@@ -6,15 +6,18 @@ import "strconv"
 
 const (
 	_Kind_name_0 = "94 Def"
-	_Kind_name_1 = "overlay"
+	_Kind_name_1 = "96 Def2"
+	_Kind_name_2 = "overlay"
 )
 
 func (i Kind) String() string {
 	switch {
 	case i == 148:
 		return _Kind_name_0
-	case i == 152:
+	case i == 150:
 		return _Kind_name_1
+	case i == 152:
+		return _Kind_name_2
 	default:
 		return "Kind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}

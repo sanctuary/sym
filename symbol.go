@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 
 	"github.com/lunixbochs/struc"
 	"github.com/pkg/errors"
@@ -24,7 +26,9 @@ func (sym *Symbol) String() string {
 
 // Size returns the size of the symbol in bytes.
 func (sym *Symbol) Size() int {
-	return binary.Size(*sym.Hdr) + sym.Body.BodySize()
+	hdrSize := binary.Size(*sym.Hdr)
+	bodySize := sym.Body.BodySize()
+	return hdrSize + bodySize
 }
 
 // A SymbolHeader is a PS1 symbol header.
@@ -85,6 +89,8 @@ func parseSymbolBody(r io.Reader, kind Kind) (SymbolBody, error) {
 	switch kind {
 	case KindDef:
 		return parse(&Def{})
+	case KindDef2:
+		return parse(&Def2{})
 	case KindOverlay:
 		return parse(&Overlay{})
 	default:
@@ -105,23 +111,56 @@ type Def struct {
 	// Definition size.
 	Size uint32 `struc:"uint32,little"`
 	// Name length.
-	Len uint8 `struc:"uint8,little,sizeof=Name"`
+	NameLen uint8 `struc:"uint8,little,sizeof=Name"`
 	// Definition name,
 	Name string
 }
 
 // String returns the string representation of the definition symbol.
 func (body *Def) String() string {
+	// $00000000 94 Def class TPDEF type UCHAR size 0 name u_char
 	return fmt.Sprintf("class %v type %v size %v name %v", body.Class, body.Type, body.Size, body.Name)
 }
 
 // BodySize returns the size of the symbol body in bytes.
 func (body *Def) BodySize() int {
-	size, err := struc.Sizeof(*body)
-	if err != nil {
-		panic(err)
-	}
-	return size
+	return 2 + 2 + 4 + 1 + int(body.NameLen)
+}
+
+// --- [ 0x96 ] ----------------------------------------------------------------
+
+// A Def2 symbol specifies the class, type, size, dimensions, tag and name of a
+// definition.
+//
+// Value of the symbol header specifies TODO.
+type Def2 struct {
+	// Definition class.
+	Class Class `struc:"uint16,little"`
+	// Definition type.
+	Type Type `struc:"uint16,little"`
+	// Definition size.
+	Size uint32 `struc:"uint32,little"`
+	// Dimensions
+	Dims Dimensions `struc:"[]uint16,little"`
+	// Tag length.
+	TagLen uint8 `struc:"uint8,little,sizeof=Tag"`
+	// Definition tag,
+	Tag string
+	// Name length.
+	NameLen uint8 `struc:"uint8,little,sizeof=Name"`
+	// Definition name,
+	Name string
+}
+
+// String returns the string representation of the definition symbol.
+func (body *Def2) String() string {
+	// $00000000 96 Def2 class MOS type ARY INT size 4 dims 1 1 tag  name r
+	return fmt.Sprintf("class %v type %v size %v dims %v tag %v name %v", body.Class, body.Type, body.Size, body.Dims, body.Tag, body.Name)
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *Def2) BodySize() int {
+	return 2 + 2 + 4 + 2*len(body.Dims) + 1 + int(body.TagLen) + 1 + int(body.NameLen)
 }
 
 // --- [ 0x98 ] ----------------------------------------------------------------
@@ -140,10 +179,58 @@ type Overlay struct {
 
 // String returns the string representation of the overlay symbol.
 func (body *Overlay) String() string {
+	// $800b031c overlay length $000009e4 id $4
 	return fmt.Sprintf("length $%08x id $%x", body.Length, body.ID)
 }
 
 // BodySize returns the size of the symbol body in bytes.
 func (body *Overlay) BodySize() int {
-	return binary.Size(*body)
+	return 4 + 4
+}
+
+// ### [ Helper functions ] ####################################################
+
+// Dimensions specifies array dimensions.
+type Dimensions []uint16
+
+func (dims *Dimensions) Pack(p []byte, opt *struc.Options) (int, error) {
+	panic("not yet implemented")
+}
+
+func (dims *Dimensions) Unpack(r io.Reader, length int, opt *struc.Options) error {
+	// TODO: figure out how to parse Dims of ARY ARY; e.g.
+	//    000dc0: $00000000 96 Def2 class MOS type ARY ARY SHORT size 18 dims 2 3 3 tag  name m
+	for {
+		var dim uint16
+		if err := binary.Read(r, binary.LittleEndian, &dim); err != nil {
+			if errors.Cause(err) == io.EOF {
+				return errors.WithStack(io.ErrUnexpectedEOF)
+			}
+			return errors.WithStack(err)
+		}
+		*dims = append(*dims, dim)
+		if dim == 0 {
+			break
+		}
+	}
+	return nil
+}
+
+func (dims *Dimensions) Size(opt *struc.Options) int {
+	return 2 * len(*dims)
+}
+
+func (dims Dimensions) String() string {
+	var ds []string
+	for _, dim := range dims {
+		if dim == 0 {
+			break
+		}
+		d := strconv.Itoa(int(dim))
+		ds = append(ds, d)
+	}
+	if len(ds) == 0 {
+		return "0"
+	}
+	return strings.Join(ds, " ")
 }
