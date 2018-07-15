@@ -110,6 +110,10 @@ func parseSymbolBody(r io.Reader, kind Kind) (SymbolBody, error) {
 		return parse(&FuncStart{})
 	case KindFuncEnd:
 		return parse(&FuncEnd{})
+	case KindBlockStart:
+		return parse(&BlockStart{})
+	case KindBlockEnd:
+		return parse(&BlockEnd{})
 	case KindDef:
 		return parse(&Def{})
 	case KindDef2:
@@ -334,7 +338,7 @@ func (body *FuncStart) String() string {
     fp = %d
     fsize = %d
     retreg = %d
-    mask = $%08X
+    mask = $%08x
     maskoffs = %d
     line = %d
     file = %s
@@ -365,6 +369,48 @@ func (body *FuncEnd) String() string {
 
 // BodySize returns the size of the symbol body in bytes.
 func (body *FuncEnd) BodySize() int {
+	return 4
+}
+
+// --- [ 0x90 ] ----------------------------------------------------------------
+
+// A BlockStart symbol specifies the start of a block.
+//
+// Value of the symbol header specifies the associated address.
+type BlockStart struct {
+	// Line number.
+	Line uint32 `struc:"uint32,little"`
+}
+
+// String returns the string representation of the block start symbol.
+func (body *BlockStart) String() string {
+	// $8003017c 90 Block_start  line = 1
+	return fmt.Sprintf("Block_start  line = %d", body.Line)
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *BlockStart) BodySize() int {
+	return 4
+}
+
+// --- [ 0x92 ] ----------------------------------------------------------------
+
+// A BlockEnd symbol specifies the end of a block.
+//
+// Value of the symbol header specifies the associated address.
+type BlockEnd struct {
+	// Line number.
+	Line uint32 `struc:"uint32,little"`
+}
+
+// String returns the string representation of the block end symbol.
+func (body *BlockEnd) String() string {
+	// $800301ac 92 Block_end  line = 4
+	return fmt.Sprintf("Block_end  line = %d", body.Line)
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *BlockEnd) BodySize() int {
 	return 4
 }
 

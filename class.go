@@ -7,9 +7,13 @@ type Class uint16
 
 // Definition classes.
 const (
+	ClassAUTO    Class = 0x0001 // AUTO
 	ClassEXT     Class = 0x0002 // EXT
 	ClassSTAT    Class = 0x0003 // STAT
+	ClassREG     Class = 0x0004 // REG
+	ClassLABEL   Class = 0x0006 // LABEL
 	ClassMOS     Class = 0x0008 // MOS
+	ClassARG     Class = 0x0009 // ARG
 	ClassSTRTAG  Class = 0x000A // STRTAG
 	ClassMOU     Class = 0x000B // MOU
 	ClassUNTAG   Class = 0x000C // UNTAG
