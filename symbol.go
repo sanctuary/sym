@@ -87,6 +87,10 @@ func parseSymbolBody(r io.Reader, kind Kind) (SymbolBody, error) {
 		return body, nil
 	}
 	switch kind {
+	case KindName1:
+		return parse(&Name1{})
+	case KindName2:
+		return parse(&Name2{})
 	case KindDef:
 		return parse(&Def{})
 	case KindDef2:
@@ -96,6 +100,52 @@ func parseSymbolBody(r io.Reader, kind Kind) (SymbolBody, error) {
 	default:
 		return nil, errors.Errorf("support for symbol kind 0x%02X not yet implemented", uint8(kind))
 	}
+}
+
+// --- [ 0x01 ] ----------------------------------------------------------------
+
+// A Name1 symbol specifies the name of a symbol.
+//
+// Value of the symbol header specifies associated address.
+type Name1 struct {
+	// Name length.
+	NameLen uint8 `struc:"uint8,little,sizeof=Name"`
+	// Symbol name,
+	Name string
+}
+
+// String returns the string representation of the name symbol.
+func (body *Name1) String() string {
+	// $00000000 1 __RHS2_data_size
+	return body.Name
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *Name1) BodySize() int {
+	return 1 + int(body.NameLen)
+}
+
+// --- [ 0x02 ] ----------------------------------------------------------------
+
+// A Name2 symbol specifies the name of a symbol.
+//
+// Value of the symbol header specifies associated address.
+type Name2 struct {
+	// Name length.
+	NameLen uint8 `struc:"uint8,little,sizeof=Name"`
+	// Symbol name,
+	Name string
+}
+
+// String returns the string representation of the name symbol.
+func (body *Name2) String() string {
+	// $80010000 2 printattribute
+	return body.Name
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *Name2) BodySize() int {
+	return 1 + int(body.NameLen)
 }
 
 // --- [ 0x94 ] ----------------------------------------------------------------

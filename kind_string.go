@@ -5,19 +5,27 @@ package sym
 import "strconv"
 
 const (
-	_Kind_name_0 = "94 Def"
-	_Kind_name_1 = "96 Def2"
-	_Kind_name_2 = "overlay"
+	_Kind_name_0 = "12"
+	_Kind_name_1 = "94 Def"
+	_Kind_name_2 = "96 Def2"
+	_Kind_name_3 = "overlay"
+)
+
+var (
+	_Kind_index_0 = [...]uint8{0, 1, 2}
 )
 
 func (i Kind) String() string {
 	switch {
+	case 1 <= i && i <= 2:
+		i -= 1
+		return _Kind_name_0[_Kind_index_0[i]:_Kind_index_0[i+1]]
 	case i == 148:
-		return _Kind_name_0
-	case i == 150:
 		return _Kind_name_1
-	case i == 152:
+	case i == 150:
 		return _Kind_name_2
+	case i == 152:
+		return _Kind_name_3
 	default:
 		return "Kind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
