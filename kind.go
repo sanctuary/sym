@@ -15,6 +15,7 @@ const (
 	KindSetSLD     Kind = 0x86 // 86
 	KindSetSLD2    Kind = 0x88 // 88
 	KindEndSLD     Kind = 0x8A // 8a
+	KindFuncStart  Kind = 0x8C // 8c
 	KindDef        Kind = 0x94 // 94 Def
 	KindDef2       Kind = 0x96 // 96 Def2
 	KindOverlay    Kind = 0x98 // overlay

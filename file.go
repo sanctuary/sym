@@ -28,33 +28,33 @@ func (f *File) String() string {
 	offset := 0
 	buf.WriteString(f.Hdr.String())
 	offset += binary.Size(*f.Hdr)
-	var lineNr int
+	var line int
 	for _, sym := range f.Syms {
 		hdrStr := sym.Hdr.String()
 		bodyStr := sym.Body.String()
 		switch body := sym.Body.(type) {
 		case *IncSLD:
-			if lineNr == 0 {
+			if line == 0 {
 				panic(fmt.Errorf("cannot use IncSLD symbol before associated SetSLD symbol"))
 			}
-			lineNr++
-			bodyStr = fmt.Sprintf("Inc SLD linenum (to %d)", lineNr)
+			line++
+			bodyStr = fmt.Sprintf("Inc SLD linenum (to %d)", line)
 		case *IncSLDByte:
-			if lineNr == 0 {
+			if line == 0 {
 				panic(fmt.Errorf("cannot use IncSLDByte symbol before associated SetSLD symbol"))
 			}
-			lineNr += int(body.Inc)
-			bodyStr = fmt.Sprintf("Inc SLD linenum by byte %d (to %d)", body.Inc, lineNr)
+			line += int(body.Inc)
+			bodyStr = fmt.Sprintf("Inc SLD linenum by byte %d (to %d)", body.Inc, line)
 		case *IncSLDWord:
-			if lineNr == 0 {
+			if line == 0 {
 				panic(fmt.Errorf("cannot use IncSLDWord symbol before associated SetSLD symbol"))
 			}
-			lineNr += int(body.Inc)
-			bodyStr = fmt.Sprintf("Inc SLD linenum by word %d (to %d)", body.Inc, lineNr)
+			line += int(body.Inc)
+			bodyStr = fmt.Sprintf("Inc SLD linenum by word %d (to %d)", body.Inc, line)
 		case *SetSLD:
-			lineNr = int(body.LineNr)
+			line = int(body.Line)
 		case *SetSLD2:
-			lineNr = int(body.LineNr)
+			line = int(body.Line)
 		}
 		fmt.Fprintf(buf, "%06x: %s %s\n", offset, hdrStr, bodyStr)
 		offset += sym.Size()

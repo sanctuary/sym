@@ -106,6 +106,8 @@ func parseSymbolBody(r io.Reader, kind Kind) (SymbolBody, error) {
 	case KindEndSLD:
 		// empty body.
 		return &EndSLD{}, nil
+	case KindFuncStart:
+		return parse(&FuncStart{})
 	case KindDef:
 		return parse(&Def{})
 	case KindDef2:
@@ -229,13 +231,13 @@ func (body *IncSLDWord) BodySize() int {
 // Value of the symbol header specifies the associated address.
 type SetSLD struct {
 	// Line number.
-	LineNr uint32 `struc:"uint32,little"`
+	Line uint32 `struc:"uint32,little"`
 }
 
 // String returns the string representation of the set line number symbol.
 func (body *SetSLD) String() string {
 	// $8001ff08 86 Set SLD linenum to 88
-	return fmt.Sprintf("Set SLD linenum to %d", body.LineNr)
+	return fmt.Sprintf("Set SLD linenum to %d", body.Line)
 }
 
 // BodySize returns the size of the symbol body in bytes.
@@ -250,7 +252,7 @@ func (body *SetSLD) BodySize() int {
 // Value of the symbol header specifies the associated address.
 type SetSLD2 struct {
 	// Line number.
-	LineNr uint32 `struc:"uint32,little"`
+	Line uint32 `struc:"uint32,little"`
 	// Path length.
 	PathLen uint8 `struc:"uint8,little,sizeof=Path"`
 	// Source file,
@@ -260,7 +262,7 @@ type SetSLD2 struct {
 // String returns the string representation of the set line number symbol.
 func (body *SetSLD2) String() string {
 	// $80010000 88 Set SLD to line 115 of file D:\LIB\PSX\NULLFUNC.ASM
-	return fmt.Sprintf("Set SLD to line %d of file %s", body.LineNr, body.Path)
+	return fmt.Sprintf("Set SLD to line %d of file %s", body.Line, body.Path)
 }
 
 // BodySize returns the size of the symbol body in bytes.
@@ -285,6 +287,62 @@ func (body *EndSLD) String() string {
 // BodySize returns the size of the symbol body in bytes.
 func (body *EndSLD) BodySize() int {
 	return 0
+}
+
+// --- [ 0x8C ] ----------------------------------------------------------------
+
+// A FuncStart symbol specifies the start of a function.
+//
+// Value of the symbol header specifies TODO.
+type FuncStart struct {
+	// Frame pointer register.
+	FP uint16 `struc:"uint16,little"`
+	// Function size.
+	FSize uint32 `struc:"uint32,little"`
+	// Return address register.
+	RetReg uint16 `struc:"uint16,little"`
+	// Mask.
+	Mask uint32 `struc:"uint32,little"`
+	// Mask offset.
+	MaskOffset int32 `struc:"int32,little"`
+	// Line number.
+	Line uint32 `struc:"uint32,little"`
+	// Path length.
+	PathLen uint8 `struc:"uint8,little,sizeof=Path"`
+	// Source file.
+	Path string
+	// Name length.
+	NameLen uint8 `struc:"uint8,little,sizeof=Name"`
+	// Symbol name.
+	Name string
+}
+
+// String returns the string representation of the function start symbol.
+func (body *FuncStart) String() string {
+	// $8001fefc 8c Function_start
+	//    fp = 29
+	//    fsize = 24
+	//    retreg = 31
+	//    mask = $80000000
+	//    maskoffs = -8
+	//    line = 88
+	//    file = C:\DIABPSX\GLIBDEV\SOURCE\TASKER.C
+	//    name = DoEpi
+	const format = `Function_start
+    fp = %d
+    fsize = %d
+    retreg = %d
+    mask = $%08X
+    maskoffs = %d
+    line = %d
+    file = %s
+    name = %s`
+	return fmt.Sprintf(format, body.FP, body.FSize, body.RetReg, body.Mask, body.MaskOffset, body.Line, body.Path, body.Name)
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *FuncStart) BodySize() int {
+	return 2 + 4 + 2 + 4 + 4 + 4 + 1 + int(body.PathLen) + 1 + int(body.NameLen)
 }
 
 // --- [ 0x94 ] ----------------------------------------------------------------

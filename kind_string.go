@@ -4,47 +4,26 @@ package sym
 
 import "strconv"
 
-const (
-	_Kind_name_0 = "12"
-	_Kind_name_1 = "80"
-	_Kind_name_2 = "82"
-	_Kind_name_3 = "84"
-	_Kind_name_4 = "86"
-	_Kind_name_5 = "88"
-	_Kind_name_6 = "8a"
-	_Kind_name_7 = "94 Def"
-	_Kind_name_8 = "96 Def2"
-	_Kind_name_9 = "overlay"
-)
+const _Kind_name = "1280828486888a8c94 Def96 Def2overlay"
 
-var (
-	_Kind_index_0 = [...]uint8{0, 1, 2}
-)
+var _Kind_map = map[Kind]string{
+	1:   _Kind_name[0:1],
+	2:   _Kind_name[1:2],
+	128: _Kind_name[2:4],
+	130: _Kind_name[4:6],
+	132: _Kind_name[6:8],
+	134: _Kind_name[8:10],
+	136: _Kind_name[10:12],
+	138: _Kind_name[12:14],
+	140: _Kind_name[14:16],
+	148: _Kind_name[16:22],
+	150: _Kind_name[22:29],
+	152: _Kind_name[29:36],
+}
 
 func (i Kind) String() string {
-	switch {
-	case 1 <= i && i <= 2:
-		i -= 1
-		return _Kind_name_0[_Kind_index_0[i]:_Kind_index_0[i+1]]
-	case i == 128:
-		return _Kind_name_1
-	case i == 130:
-		return _Kind_name_2
-	case i == 132:
-		return _Kind_name_3
-	case i == 134:
-		return _Kind_name_4
-	case i == 136:
-		return _Kind_name_5
-	case i == 138:
-		return _Kind_name_6
-	case i == 148:
-		return _Kind_name_7
-	case i == 150:
-		return _Kind_name_8
-	case i == 152:
-		return _Kind_name_9
-	default:
-		return "Kind(" + strconv.FormatInt(int64(i), 10) + ")"
+	if str, ok := _Kind_map[i]; ok {
+		return str
 	}
+	return "Kind(" + strconv.FormatInt(int64(i), 10) + ")"
 }
