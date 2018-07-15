@@ -4,7 +4,7 @@ package sym
 
 import "strconv"
 
-const _Kind_name = "1280828486888a8c8e909294 Def96 Def2overlay"
+const _Kind_name = "1280828486888a8c8e909294 Def96 Def2overlayset overlay"
 
 var _Kind_map = map[Kind]string{
 	1:   _Kind_name[0:1],
@@ -22,6 +22,7 @@ var _Kind_map = map[Kind]string{
 	148: _Kind_name[22:28],
 	150: _Kind_name[28:35],
 	152: _Kind_name[35:42],
+	154: _Kind_name[42:53],
 }
 
 func (i Kind) String() string {

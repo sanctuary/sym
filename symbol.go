@@ -120,6 +120,9 @@ func parseSymbolBody(r io.Reader, kind Kind) (SymbolBody, error) {
 		return parseDef2(r)
 	case KindOverlay:
 		return parse(&Overlay{})
+	case KindSetOverlay:
+		// empty body.
+		return &SetOverlay{}, nil
 	default:
 		return nil, errors.Errorf("support for symbol kind 0x%02X not yet implemented", uint8(kind))
 	}
@@ -284,7 +287,7 @@ func (body *SetSLD2) BodySize() int {
 type EndSLD struct {
 }
 
-// String returns the string representation of the end of lie number symbol.
+// String returns the string representation of the end of line number symbol.
 func (body *EndSLD) String() string {
 	// $80020ffc 8a End SLD info
 	return "End SLD info"
@@ -568,6 +571,25 @@ func (body *Overlay) String() string {
 // BodySize returns the size of the symbol body in bytes.
 func (body *Overlay) BodySize() int {
 	return 4 + 4
+}
+
+// --- [ 0x9A ] ----------------------------------------------------------------
+
+// A SetOverlay specifies an overlay.
+//
+// Value of the symbol header specifies TODO.
+type SetOverlay struct {
+}
+
+// String returns the string representation of the set overlay symbol.
+func (body *SetOverlay) String() string {
+	// $00000004 set overlay
+	return ""
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *SetOverlay) BodySize() int {
+	return 0
 }
 
 // ### [ Helper functions ] ####################################################

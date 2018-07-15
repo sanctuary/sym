@@ -30,7 +30,6 @@ func (f *File) String() string {
 	offset += binary.Size(*f.Hdr)
 	var line int
 	for _, sym := range f.Syms {
-		hdrStr := sym.Hdr.String()
 		bodyStr := sym.Body.String()
 		switch body := sym.Body.(type) {
 		case *IncSLD:
@@ -56,7 +55,12 @@ func (f *File) String() string {
 		case *SetSLD2:
 			line = int(body.Line)
 		}
-		fmt.Fprintf(buf, "%06x: %s %s\n", offset, hdrStr, bodyStr)
+		if len(bodyStr) == 0 {
+			fmt.Fprintf(buf, "%06x: %s\n", offset, sym.Hdr)
+
+		} else {
+			fmt.Fprintf(buf, "%06x: %s %s\n", offset, sym.Hdr, bodyStr)
+		}
 		offset += sym.Size()
 	}
 	return buf.String()
