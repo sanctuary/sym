@@ -108,6 +108,8 @@ func parseSymbolBody(r io.Reader, kind Kind) (SymbolBody, error) {
 		return &EndSLD{}, nil
 	case KindFuncStart:
 		return parse(&FuncStart{})
+	case KindFuncEnd:
+		return parse(&FuncEnd{})
 	case KindDef:
 		return parse(&Def{})
 	case KindDef2:
@@ -293,7 +295,7 @@ func (body *EndSLD) BodySize() int {
 
 // A FuncStart symbol specifies the start of a function.
 //
-// Value of the symbol header specifies TODO.
+// Value of the symbol header specifies the associated address.
 type FuncStart struct {
 	// Frame pointer register.
 	FP uint16 `struc:"uint16,little"`
@@ -345,11 +347,32 @@ func (body *FuncStart) BodySize() int {
 	return 2 + 4 + 2 + 4 + 4 + 4 + 1 + int(body.PathLen) + 1 + int(body.NameLen)
 }
 
+// --- [ 0x8E ] ----------------------------------------------------------------
+
+// A FuncEnd symbol specifies the end of a function.
+//
+// Value of the symbol header specifies the associated address.
+type FuncEnd struct {
+	// Line number.
+	Line uint32 `struc:"uint32,little"`
+}
+
+// String returns the string representation of the function end symbol.
+func (body *FuncEnd) String() string {
+	// $8001ff4c 8e Function_end   line 91
+	return fmt.Sprintf("Function_end   line %d", body.Line)
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *FuncEnd) BodySize() int {
+	return 4
+}
+
 // --- [ 0x94 ] ----------------------------------------------------------------
 
 // A Def symbol specifies the class, type, size and name of a definition.
 //
-// Value of the symbol header specifies TODO.
+// Value of the symbol header specifies the associated address.
 type Def struct {
 	// Definition class.
 	Class Class `struc:"uint16,little"`
@@ -379,7 +402,7 @@ func (body *Def) BodySize() int {
 // A Def2 symbol specifies the class, type, size, dimensions, tag and name of a
 // definition.
 //
-// Value of the symbol header specifies TODO.
+// Value of the symbol header specifies the associated address.
 type Def2 struct {
 	// Definition class.
 	Class Class `struc:"uint16,little"`
@@ -511,8 +534,6 @@ func (dims *Dimensions) Pack(p []byte, opt *struc.Options) (int, error) {
 }
 
 func (dims *Dimensions) Unpack(r io.Reader, length int, opt *struc.Options) error {
-	// TODO: figure out how to parse Dims of ARY ARY; e.g.
-	//    000dc0: $00000000 96 Def2 class MOS type ARY ARY SHORT size 18 dims 2 3 3 tag  name m
 	for {
 		var dim uint16
 		if err := binary.Read(r, binary.LittleEndian, &dim); err != nil {
