@@ -28,8 +28,27 @@ func (f *File) String() string {
 	offset := 0
 	buf.WriteString(f.Hdr.String())
 	offset += binary.Size(*f.Hdr)
+	var lineNr int
 	for _, sym := range f.Syms {
-		fmt.Fprintf(buf, "%06x: %s\n", offset, sym)
+		hdrStr := sym.Hdr.String()
+		bodyStr := sym.Body.String()
+		switch body := sym.Body.(type) {
+		case *IncSLD1:
+			if lineNr == 0 {
+				panic(fmt.Errorf("cannot use IncSLD1 symbol before associated SetSLD symbol"))
+			}
+			lineNr++
+			bodyStr = fmt.Sprintf("Inc SLD linenum (to %d)", lineNr)
+		case *IncSLD:
+			if lineNr == 0 {
+				panic(fmt.Errorf("cannot use IncSLD symbol before associated SetSLD symbol"))
+			}
+			lineNr += int(body.Inc)
+			bodyStr = fmt.Sprintf("Inc SLD linenum by byte %d (to %d)", body.Inc, lineNr)
+		case *SetSLD:
+			lineNr = int(body.LineNr)
+		}
+		fmt.Fprintf(buf, "%06x: %s %s\n", offset, hdrStr, bodyStr)
 		offset += sym.Size()
 	}
 	return buf.String()

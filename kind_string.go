@@ -6,9 +6,12 @@ import "strconv"
 
 const (
 	_Kind_name_0 = "12"
-	_Kind_name_1 = "94 Def"
-	_Kind_name_2 = "96 Def2"
-	_Kind_name_3 = "overlay"
+	_Kind_name_1 = "80"
+	_Kind_name_2 = "82"
+	_Kind_name_3 = "88"
+	_Kind_name_4 = "94 Def"
+	_Kind_name_5 = "96 Def2"
+	_Kind_name_6 = "overlay"
 )
 
 var (
@@ -20,12 +23,18 @@ func (i Kind) String() string {
 	case 1 <= i && i <= 2:
 		i -= 1
 		return _Kind_name_0[_Kind_index_0[i]:_Kind_index_0[i+1]]
-	case i == 148:
+	case i == 128:
 		return _Kind_name_1
-	case i == 150:
+	case i == 130:
 		return _Kind_name_2
-	case i == 152:
+	case i == 136:
 		return _Kind_name_3
+	case i == 148:
+		return _Kind_name_4
+	case i == 150:
+		return _Kind_name_5
+	case i == 152:
+		return _Kind_name_6
 	default:
 		return "Kind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
