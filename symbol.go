@@ -90,7 +90,7 @@ func parseSymbolBody(r io.Reader, kind Kind) (SymbolBody, error) {
 	case KindDef:
 		return parse(&Def{})
 	case KindDef2:
-		return parse(&Def2{})
+		return parseDef2(r)
 	case KindOverlay:
 		return parse(&Overlay{})
 	default:
@@ -141,7 +141,7 @@ type Def2 struct {
 	// Definition size.
 	Size uint32 `struc:"uint32,little"`
 	// Dimensions
-	Dims Dimensions `struc:"[]uint16,little"`
+	Dims []Dimensions
 	// Tag length.
 	TagLen uint8 `struc:"uint8,little,sizeof=Tag"`
 	// Definition tag,
@@ -155,12 +155,78 @@ type Def2 struct {
 // String returns the string representation of the definition symbol.
 func (body *Def2) String() string {
 	// $00000000 96 Def2 class MOS type ARY INT size 4 dims 1 1 tag  name r
-	return fmt.Sprintf("class %v type %v size %v dims %v tag %v name %v", body.Class, body.Type, body.Size, body.Dims, body.Tag, body.Name)
+	var dd []string
+	for _, dims := range body.Dims {
+		dd = append(dd, dims.String())
+	}
+	return fmt.Sprintf("class %v type %v size %v dims %v tag %v name %v", body.Class, body.Type, body.Size, strings.Join(dd, " "), body.Tag, body.Name)
 }
 
 // BodySize returns the size of the symbol body in bytes.
 func (body *Def2) BodySize() int {
-	return 2 + 2 + 4 + 2*len(body.Dims) + 1 + int(body.TagLen) + 1 + int(body.NameLen)
+	dimsLen := 0
+	for _, dims := range body.Dims {
+		dimsLen += 2 * len(dims)
+	}
+	return 2 + 2 + 4 + dimsLen + 1 + int(body.TagLen) + 1 + int(body.NameLen)
+}
+
+// parseDef2 parses the body of a Def2 symbol.
+func parseDef2(r io.Reader) (SymbolBody, error) {
+	body := &Def2{}
+	// Class
+	if err := binary.Read(r, binary.LittleEndian, &body.Class); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	// Type
+	if err := binary.Read(r, binary.LittleEndian, &body.Type); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	// Size
+	if err := binary.Read(r, binary.LittleEndian, &body.Size); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	// Dims
+	narray := 0
+	for _, mod := range body.Type.mods() {
+		// ARY
+		if mod == 0x3 {
+			narray++
+		}
+	}
+	if narray == 0 {
+		narray = 1
+	}
+	for i := 0; i < narray; i++ {
+		var dims Dimensions
+		if err := struc.Unpack(r, &dims); err != nil {
+			return nil, errors.WithStack(err)
+		}
+		body.Dims = append(body.Dims, dims)
+	}
+	// Tag
+	if err := binary.Read(r, binary.LittleEndian, &body.TagLen); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if body.TagLen > 0 {
+		buf := make([]byte, body.TagLen)
+		if _, err := io.ReadFull(r, buf); err != nil {
+			return nil, errors.WithStack(err)
+		}
+		body.Tag = string(buf)
+	}
+	// Name
+	if err := binary.Read(r, binary.LittleEndian, &body.NameLen); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if body.NameLen > 0 {
+		buf := make([]byte, body.NameLen)
+		if _, err := io.ReadFull(r, buf); err != nil {
+			return nil, errors.WithStack(err)
+		}
+		body.Name = string(buf)
+	}
+	return body, nil
 }
 
 // --- [ 0x98 ] ----------------------------------------------------------------

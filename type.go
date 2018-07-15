@@ -19,7 +19,7 @@ var baseName = map[uint16]string{
 	// TODO: 0x6
 	// TODO: 0x7
 	0x8: "STRUCT",
-	// TODO: 0x9
+	0x9: "UNION",
 	0xA: "ENUM",
 	0xB: "MOE",
 	0xC: "UCHAR",
@@ -50,6 +50,7 @@ func (t Type) String() string {
 		// 0b0000000000110000
 		shift := uint16(4 + i*2)
 		mask := uint16(0x3) << shift
+		// TODO: refactor to use t.mods
 		modMask := (uint16(t) & mask) >> shift
 		if modMask == 0 {
 			continue
@@ -62,4 +63,23 @@ func (t Type) String() string {
 	}
 	ss := append(mods, base)
 	return strings.Join(ss, " ")
+}
+
+// mods returns the modifiers of the type.
+func (t Type) mods() []uint16 {
+	var mods []uint16
+	for i := 0; i < 6; i++ {
+		// 0b0000000000110000
+		shift := uint16(4 + i*2)
+		mask := uint16(0x3) << shift
+		modMask := (uint16(t) & mask) >> shift
+		if modMask == 0 {
+			continue
+		}
+		if !(modMask >= 0x1 && modMask <= 0x3) {
+			panic("unreachable")
+		}
+		mods = append(mods, modMask)
+	}
+	return mods
 }
