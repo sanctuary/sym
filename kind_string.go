@@ -8,10 +8,13 @@ const (
 	_Kind_name_0 = "12"
 	_Kind_name_1 = "80"
 	_Kind_name_2 = "82"
-	_Kind_name_3 = "88"
-	_Kind_name_4 = "94 Def"
-	_Kind_name_5 = "96 Def2"
-	_Kind_name_6 = "overlay"
+	_Kind_name_3 = "84"
+	_Kind_name_4 = "86"
+	_Kind_name_5 = "88"
+	_Kind_name_6 = "8a"
+	_Kind_name_7 = "94 Def"
+	_Kind_name_8 = "96 Def2"
+	_Kind_name_9 = "overlay"
 )
 
 var (
@@ -27,14 +30,20 @@ func (i Kind) String() string {
 		return _Kind_name_1
 	case i == 130:
 		return _Kind_name_2
-	case i == 136:
+	case i == 132:
 		return _Kind_name_3
-	case i == 148:
+	case i == 134:
 		return _Kind_name_4
-	case i == 150:
+	case i == 136:
 		return _Kind_name_5
-	case i == 152:
+	case i == 138:
 		return _Kind_name_6
+	case i == 148:
+		return _Kind_name_7
+	case i == 150:
+		return _Kind_name_8
+	case i == 152:
+		return _Kind_name_9
 	default:
 		return "Kind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}

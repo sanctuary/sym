@@ -92,13 +92,20 @@ func parseSymbolBody(r io.Reader, kind Kind) (SymbolBody, error) {
 		return parse(&Name1{})
 	case KindName2:
 		return parse(&Name2{})
-	case KindIncSLD1:
-		// empty body.
-		return &IncSLD1{}, nil
 	case KindIncSLD:
-		return parse(&IncSLD{})
+		// empty body.
+		return &IncSLD{}, nil
+	case KindIncSLDByte:
+		return parse(&IncSLDByte{})
+	case KindIncSLDWord:
+		return parse(&IncSLDWord{})
 	case KindSetSLD:
 		return parse(&SetSLD{})
+	case KindSetSLD2:
+		return parse(&SetSLD2{})
+	case KindEndSLD:
+		// empty body.
+		return &EndSLD{}, nil
 	case KindDef:
 		return parse(&Def{})
 	case KindDef2:
@@ -158,50 +165,90 @@ func (body *Name2) BodySize() int {
 
 // --- [ 0x80 ] ----------------------------------------------------------------
 
-// An IncSLD1 symbol increments the current line number.
+// An IncSLD symbol increments the current line number.
 //
 // Value of the symbol header specifies the associated address.
-type IncSLD1 struct {
+type IncSLD struct {
 }
 
 // String returns the string representation of the line number increment symbol.
-func (body *IncSLD1) String() string {
+func (body *IncSLD) String() string {
 	// $80010004 80 Inc SLD linenum (to 116)
 	return "Inc SLD linenum"
 }
 
 // BodySize returns the size of the symbol body in bytes.
-func (body *IncSLD1) BodySize() int {
+func (body *IncSLD) BodySize() int {
 	return 0
 }
 
 // --- [ 0x82 ] ----------------------------------------------------------------
 
-// An IncSLD symbol specifies the increment of the current line number.
+// An IncSLDByte symbol specifies the increment of the current line number.
 //
 // Value of the symbol header specifies the associated address.
-type IncSLD struct {
+type IncSLDByte struct {
 	Inc uint8 `struc:"uint8,little"`
 }
 
-// String returns the string representation of the line number increment by 2
-// symbol.
-func (body *IncSLD) String() string {
+// String returns the string representation of the line number increment symbol.
+func (body *IncSLDByte) String() string {
 	// $80010008 82 Inc SLD linenum by byte 2 (to 118)
 	return fmt.Sprintf("Inc SLD linenum by byte %d", body.Inc)
 }
 
 // BodySize returns the size of the symbol body in bytes.
-func (body *IncSLD) BodySize() int {
+func (body *IncSLDByte) BodySize() int {
 	return 1
+}
+
+// --- [ 0x84 ] ----------------------------------------------------------------
+
+// An IncSLDWord symbol specifies the increment of the current line number.
+//
+// Value of the symbol header specifies the associated address.
+type IncSLDWord struct {
+	Inc uint16 `struc:"uint16,little"`
+}
+
+// String returns the string representation of the line number increment symbol.
+func (body *IncSLDWord) String() string {
+	// $80025d38 84 Inc SLD linenum by word 276 (to 479)
+	return fmt.Sprintf("Inc SLD linenum by word %d", body.Inc)
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *IncSLDWord) BodySize() int {
+	return 2
+}
+
+// --- [ 0x86 ] ----------------------------------------------------------------
+
+// A SetSLD symbol specifies the current line number.
+//
+// Value of the symbol header specifies the associated address.
+type SetSLD struct {
+	// Line number.
+	LineNr uint32 `struc:"uint32,little"`
+}
+
+// String returns the string representation of the set line number symbol.
+func (body *SetSLD) String() string {
+	// $8001ff08 86 Set SLD linenum to 88
+	return fmt.Sprintf("Set SLD linenum to %d", body.LineNr)
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *SetSLD) BodySize() int {
+	return 4
 }
 
 // --- [ 0x88 ] ----------------------------------------------------------------
 
-// A SetSLD symbol specifies the current line number and source file.
+// A SetSLD2 symbol specifies the current line number and source file.
 //
 // Value of the symbol header specifies the associated address.
-type SetSLD struct {
+type SetSLD2 struct {
 	// Line number.
 	LineNr uint32 `struc:"uint32,little"`
 	// Path length.
@@ -211,14 +258,33 @@ type SetSLD struct {
 }
 
 // String returns the string representation of the set line number symbol.
-func (body *SetSLD) String() string {
+func (body *SetSLD2) String() string {
 	// $80010000 88 Set SLD to line 115 of file D:\LIB\PSX\NULLFUNC.ASM
 	return fmt.Sprintf("Set SLD to line %d of file %s", body.LineNr, body.Path)
 }
 
 // BodySize returns the size of the symbol body in bytes.
-func (body *SetSLD) BodySize() int {
+func (body *SetSLD2) BodySize() int {
 	return 4 + 1 + int(body.PathLen)
+}
+
+// --- [ 0x8A ] ----------------------------------------------------------------
+
+// An EndSLD symbol indicates the end of a line number specifier.
+//
+// Value of the symbol header specifies the associated address.
+type EndSLD struct {
+}
+
+// String returns the string representation of the end of lie number symbol.
+func (body *EndSLD) String() string {
+	// $80020ffc 8a End SLD info
+	return "End SLD info"
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *EndSLD) BodySize() int {
+	return 0
 }
 
 // --- [ 0x94 ] ----------------------------------------------------------------
