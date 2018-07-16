@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/mewmew/sym"
+	"github.com/sanctuary/sym"
 )
 
 func main() {
