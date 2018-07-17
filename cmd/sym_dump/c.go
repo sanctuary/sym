@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/mewkiz/pkg/term"
 	"github.com/sanctuary/sym"
 	"github.com/sanctuary/sym/internal/c"
 )
+
+// Prefix added to duplicate symbols.
+const duplicatePrefix = "_duplicate_"
 
 var (
 	// TODO: remove debug output once C output is mature.
@@ -21,27 +25,50 @@ func dumpC(f *sym.File) error {
 	// referrenced before defined.
 	p := newParser()
 	// TODO: parse all symbols.
+	var (
+		uniqueStruct = make(map[string]bool)
+		uniqueUnion  = make(map[string]bool)
+		uniqueEnum   = make(map[string]bool)
+	)
 	for _, s := range f.Syms[:7117] {
 		switch body := s.Body.(type) {
 		case *sym.Def:
 			switch body.Class {
 			case sym.ClassSTRTAG:
+				tag := validName(body.Name)
+				if uniqueStruct[tag] {
+					tag = duplicatePrefix + tag
+				}
+				uniqueStruct[tag] = true
 				t := &c.StructType{
 					Size: body.Size,
-					Tag:  body.Name,
+					Tag:  tag,
 				}
-				p.structs[t.Tag] = t
+				p.structs[tag] = t
+				p.structTags = append(p.structTags, tag)
 			case sym.ClassUNTAG:
+				tag := validName(body.Name)
+				if uniqueUnion[tag] {
+					tag = duplicatePrefix + tag
+				}
+				uniqueUnion[tag] = true
 				t := &c.UnionType{
 					Size: body.Size,
-					Tag:  body.Name,
+					Tag:  tag,
 				}
-				p.unions[t.Tag] = t
+				p.unions[tag] = t
+				p.unionTags = append(p.unionTags, tag)
 			case sym.ClassENTAG:
-				t := &c.EnumType{
-					Tag: body.Name,
+				tag := validName(body.Name)
+				if uniqueEnum[tag] {
+					tag = duplicatePrefix + tag
 				}
-				p.enums[t.Tag] = t
+				uniqueEnum[tag] = true
+				t := &c.EnumType{
+					Tag: tag,
+				}
+				p.enums[tag] = t
+				p.enumTags = append(p.enumTags, tag)
 			}
 		}
 	}
@@ -105,22 +132,50 @@ type parser struct {
 	enums map[string]*c.EnumType
 	// types maps from type name to underlying type definition.
 	types map[string]*c.Typedef
+	// Struct tags in order of occurrence in SYM file.
+	structTags []string
+	// Union tags in order of occurrence in SYM file.
+	unionTags []string
+	// Enum tags in order of occurrence in SYM file.
+	enumTags []string
 	// Type definitions in order of occurrence in SYM file.
 	typedefs []*c.Typedef
+	// Tracks unique enum member names.
+	uniqueEnumMember map[string]bool
 }
 
 // newParser returns a new parser.
 func newParser() *parser {
 	return &parser{
-		structs: make(map[string]*c.StructType),
-		unions:  make(map[string]*c.UnionType),
-		enums:   make(map[string]*c.EnumType),
-		types:   make(map[string]*c.Typedef),
+		structs:          make(map[string]*c.StructType),
+		unions:           make(map[string]*c.UnionType),
+		enums:            make(map[string]*c.EnumType),
+		types:            make(map[string]*c.Typedef),
+		uniqueEnumMember: make(map[string]bool),
 	}
 }
 
 // dump outputs the type information recorded by the parser as a C header.
 func (p *parser) dump() {
+	// Print predeclared identifiers.
+	def := p.types["bool"]
+	fmt.Println(def.Def())
+	// Print enums.
+	for _, tag := range p.enumTags {
+		t := p.enums[tag]
+		fmt.Printf("%s;\n", t.Def())
+	}
+	// Print structs.
+	for _, tag := range p.structTags {
+		t := p.structs[tag]
+		fmt.Printf("%s;\n", t.Def())
+	}
+	// Print unions.
+	for _, tag := range p.unionTags {
+		t := p.unions[tag]
+		fmt.Printf("%s;\n", t.Def())
+	}
+	// Print typedefs.
 	for _, def := range p.typedefs {
 		fmt.Println(def.Def())
 	}
@@ -131,9 +186,19 @@ func (p *parser) parseClassSTRTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 	if base := body.Type.Base(); base != sym.BaseStruct {
 		panic(fmt.Sprintf("support for base type %q not yet implemented", base))
 	}
-	t, ok := p.structs[body.Name]
+	name := validName(body.Name)
+	t, ok := p.structs[name]
 	if !ok {
-		panic(fmt.Sprintf("unable to locate struct %q", body.Name))
+		panic(fmt.Sprintf("unable to locate struct %q", name))
+	}
+	if len(t.Fields) > 0 {
+		log.Printf("duplicate struct tag %q symbol", name)
+		dupTag := duplicatePrefix + name
+		t = &c.StructType{
+			Size: body.Size,
+			Tag:  dupTag,
+		}
+		p.structs[dupTag] = t
 	}
 	for n = 0; n < len(syms); n++ {
 		s := syms[n]
@@ -141,16 +206,20 @@ func (p *parser) parseClassSTRTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 		case *sym.Def:
 			switch body.Class {
 			case sym.ClassMOS:
-				field := &c.Field{
-					Type: p.parseType(body.Type, nil, ""),
-					Name: body.Name,
+				field := c.Field{
+					Offset: s.Hdr.Value,
+					Size:   body.Size,
+					Type:   p.parseType(body.Type, nil, ""),
+					Name:   validName(body.Name),
 				}
 				t.Fields = append(t.Fields, field)
 			case sym.ClassFIELD:
 				// TODO: Figure out how to handle FIELD. For now, parse as MOS.
-				field := &c.Field{
-					Type: p.parseType(body.Type, nil, ""),
-					Name: body.Name,
+				field := c.Field{
+					Offset: s.Hdr.Value,
+					Size:   body.Size,
+					Type:   p.parseType(body.Type, nil, ""),
+					Name:   validName(body.Name),
 				}
 				t.Fields = append(t.Fields, field)
 			default:
@@ -159,9 +228,11 @@ func (p *parser) parseClassSTRTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 		case *sym.Def2:
 			switch body.Class {
 			case sym.ClassMOS:
-				field := &c.Field{
-					Type: p.parseType(body.Type, body.Dims, body.Tag),
-					Name: body.Name,
+				field := c.Field{
+					Offset: s.Hdr.Value,
+					Size:   body.Size,
+					Type:   p.parseType(body.Type, body.Dims, body.Tag),
+					Name:   validName(body.Name),
 				}
 				t.Fields = append(t.Fields, field)
 			case sym.ClassEOS:
@@ -179,9 +250,10 @@ func (p *parser) parseClassUNTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 	if base := body.Type.Base(); base != sym.BaseUnion {
 		panic(fmt.Sprintf("support for base type %q not yet implemented", base))
 	}
-	t, ok := p.unions[body.Name]
+	name := validName(body.Name)
+	t, ok := p.unions[name]
 	if !ok {
-		panic(fmt.Sprintf("unable to locate union %q", body.Name))
+		panic(fmt.Sprintf("unable to locate union %q", name))
 	}
 	for n = 0; n < len(syms); n++ {
 		s := syms[n]
@@ -189,9 +261,11 @@ func (p *parser) parseClassUNTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 		case *sym.Def:
 			switch body.Class {
 			case sym.ClassMOU:
-				field := &c.Field{
-					Type: p.parseType(body.Type, nil, ""),
-					Name: body.Name,
+				field := c.Field{
+					Offset: s.Hdr.Value,
+					Size:   body.Size,
+					Type:   p.parseType(body.Type, nil, ""),
+					Name:   validName(body.Name),
 				}
 				t.Fields = append(t.Fields, field)
 			default:
@@ -200,9 +274,11 @@ func (p *parser) parseClassUNTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 		case *sym.Def2:
 			switch body.Class {
 			case sym.ClassMOU:
-				field := &c.Field{
-					Type: p.parseType(body.Type, body.Dims, body.Tag),
-					Name: body.Name,
+				field := c.Field{
+					Offset: s.Hdr.Value,
+					Size:   body.Size,
+					Type:   p.parseType(body.Type, body.Dims, body.Tag),
+					Name:   validName(body.Name),
 				}
 				t.Fields = append(t.Fields, field)
 			case sym.ClassEOS:
@@ -217,6 +293,7 @@ func (p *parser) parseClassUNTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 
 // parseClassTPDEF parses a typedef symbol.
 func (p *parser) parseClassTPDEF(t sym.Type, name string, dims []uint32, tag string) {
+	name = validName(name)
 	def := &c.Typedef{
 		Type: p.parseType(t, dims, tag),
 		Name: name,
@@ -230,9 +307,10 @@ func (p *parser) parseClassENTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 	if base := body.Type.Base(); base != sym.BaseEnum {
 		panic(fmt.Sprintf("support for base type %q not yet implemented", base))
 	}
-	t, ok := p.enums[body.Name]
+	name := validName(body.Name)
+	t, ok := p.enums[name]
 	if !ok {
-		panic(fmt.Sprintf("unable to locate enum %q", body.Name))
+		panic(fmt.Sprintf("unable to locate enum %q", name))
 	}
 	for n = 0; n < len(syms); n++ {
 		s := syms[n]
@@ -240,9 +318,14 @@ func (p *parser) parseClassENTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 		case *sym.Def:
 			switch body.Class {
 			case sym.ClassMOE:
+				name := validName(body.Name)
+				if p.uniqueEnumMember[name] {
+					name = strings.ToUpper(duplicatePrefix) + name
+				}
+				p.uniqueEnumMember[name] = true
 				member := &c.EnumMember{
 					Value: s.Hdr.Value,
-					Name:  body.Name,
+					Name:  name,
 				}
 				t.Members = append(t.Members, member)
 			default:
@@ -264,13 +347,13 @@ func (p *parser) parseClassENTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 
 // parseBase parses the SYM type into the equivalent C type.
 func (p *parser) parseType(t sym.Type, dims []uint32, tag string) c.Type {
-	base := t.Base()
-	u := p.parseBase(base, tag)
+	u := p.parseBase(t.Base(), tag)
 	return parseMods(u, t.Mods(), dims)
 }
 
 // parseBase parses the SYM base type into the equivalent C type.
 func (p *parser) parseBase(base sym.Base, tag string) c.Type {
+	tag = validName(tag)
 	switch base {
 	case sym.BaseNull:
 		return p.types["bool"]
@@ -318,7 +401,11 @@ func (p *parser) parseBase(base sym.Base, tag string) c.Type {
 
 // parseMods parses the SYM type modifiers into the equivalent C type modifiers.
 func parseMods(t c.Type, mods []sym.Mod, dims []uint32) c.Type {
-	for _, mod := range mods {
+	j := 0
+	// TODO: consider rewriting c.Type.Mods to calculate mask from right to left
+	// instead of left to right.
+	for i := len(mods) - 1; i >= 0; i-- {
+		mod := mods[i]
 		switch mod {
 		case sym.ModPointer:
 			t = &c.PointerType{Elem: t}
@@ -328,13 +415,25 @@ func parseMods(t c.Type, mods []sym.Mod, dims []uint32) c.Type {
 				RetType: t,
 			}
 		case sym.ModArray:
-			for _, dim := range dims {
-				t = &c.ArrayType{
-					Elem: t,
-					Len:  int(dim),
-				}
+			t = &c.ArrayType{
+				Elem: t,
+				Len:  int(dims[j]),
 			}
+			j++
 		}
 	}
 	return t
+}
+
+// validName returns a valid C identifier based on the given name.
+func validName(name string) string {
+	f := func(r rune) rune {
+		switch {
+		case 'a' <= r && r <= 'z' || 'A' <= r && r <= 'Z' || '0' <= r && r <= '9':
+			return r
+		default:
+			return '_'
+		}
+	}
+	return strings.Map(f, name)
 }

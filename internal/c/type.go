@@ -3,7 +3,9 @@ package c
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
+	"text/tabwriter"
 )
 
 // Type is a C type.
@@ -30,8 +32,17 @@ func (t *Typedef) String() string {
 
 // Def returns the C syntax representation of the definition of the type.
 func (t *Typedef) Def() string {
-	// TODO: fix output of function pointers and array type definitions.
-	return fmt.Sprintf("typedef %s %s;", t.Type.Def(), t.Name)
+	switch t.Type.(type) {
+	case BaseType:
+		return fmt.Sprintf("typedef %s %s;", t.Type, t.Name)
+	default:
+		// HACK, but works. The syntax of the C type system is pre-historic.
+		field := Field{
+			Type: t.Type,
+			Name: t.Name,
+		}
+		return fmt.Sprintf("typedef %s;", field)
+	}
 }
 
 // --- [ Base type ] -----------------------------------------------------------
@@ -86,7 +97,7 @@ type StructType struct {
 	// Structure tag.
 	Tag string
 	// Structure fields.
-	Fields []*Field
+	Fields []Field
 }
 
 // String returns the string representation of the structure type.
@@ -108,6 +119,8 @@ func (t *StructType) Def() string {
 	for _, field := range t.Fields {
 		if field.Size > 0 {
 			fmt.Fprintf(buf, "\t// offset: %04X (%d bytes)\n", field.Offset, field.Size)
+		} else if len(t.Fields) > 1 && t.Fields[1].Offset > 0 {
+			fmt.Fprintf(buf, "\t// offset: %04X\n", field.Offset)
 		}
 		// TODO: figure out how to print struct fields using type spiral rule.
 		fmt.Fprintf(buf, "\t%s;\n", field)
@@ -125,7 +138,7 @@ type UnionType struct {
 	// Union tag.
 	Tag string
 	// Union fields.
-	Fields []*Field
+	Fields []Field
 }
 
 // String returns the string representation of the union type.
@@ -145,6 +158,11 @@ func (t *UnionType) Def() string {
 		buf.WriteString("union {\n")
 	}
 	for _, field := range t.Fields {
+		if field.Size > 0 {
+			fmt.Fprintf(buf, "\t// offset: %04X (%d bytes)\n", field.Offset, field.Size)
+		} else if len(t.Fields) > 1 && t.Fields[1].Offset > 0 {
+			fmt.Fprintf(buf, "\t// offset: %04X\n", field.Offset)
+		}
 		fmt.Fprintf(buf, "\t%s;\n", field)
 	}
 	buf.WriteString("}")
@@ -163,7 +181,7 @@ type EnumType struct {
 
 // String returns the string representation of the enum type.
 func (t *EnumType) String() string {
-	return fmt.Sprintf("union %s", t.Tag)
+	return fmt.Sprintf("enum %s", t.Tag)
 }
 
 // Def returns the C syntax representation of the definition of the type.
@@ -178,9 +196,13 @@ func (t *EnumType) Def() string {
 		return t.Members[i].Value < t.Members[j].Value
 	}
 	sort.Slice(t.Members, less)
+	w := tabwriter.NewWriter(buf, 1, 3, 1, ' ', tabwriter.TabIndent)
 	for _, member := range t.Members {
 		// TODO: use tabwriter.
-		fmt.Fprintf(buf, "\t%s = %d,\n", member.Name, member.Value)
+		fmt.Fprintf(w, "\t%s\t= %d,\n", member.Name, member.Value)
+	}
+	if err := w.Flush(); err != nil {
+		panic(fmt.Errorf("unable to flush tabwriter; %v", err))
 	}
 	buf.WriteString("}")
 	return buf.String()
@@ -223,7 +245,7 @@ type FuncType struct {
 	// Return type.
 	RetType Type
 	// Function parameters.
-	Params []*Field
+	Params []Field
 	// Variadic function.
 	Variadic bool
 }
@@ -270,7 +292,75 @@ type Field struct {
 }
 
 // String returns the string representation of the field.
-func (f *Field) String() string {
-	// TODO: Figure out how to handle function types.
-	return fmt.Sprintf("%s %s", f.Type, f.Name)
+func (f Field) String() string {
+	switch t := f.Type.(type) {
+	case *PointerType:
+		// HACK, but works. The syntax of the C type system is pre-historic.
+		f.Name = fmt.Sprintf("*%s", f.Name)
+		f.Type = t.Elem
+		return f.String()
+	case *ArrayType:
+		// HACK, but works. The syntax of the C type system is pre-historic.
+		f.Name = fmt.Sprintf("%s[%d]", f.Name, t.Len)
+		f.Type = t.Elem
+		return f.String()
+	case *FuncType:
+		// HACK, but works. The syntax of the C type system is pre-historic.
+		buf := &strings.Builder{}
+		fmt.Fprintf(buf, "(%s)(", f.Name)
+		for i, param := range t.Params {
+			if i != 0 {
+				buf.WriteString(", ")
+			}
+			buf.WriteString(param.String())
+		}
+		if t.Variadic {
+			if len(t.Params) > 0 {
+				buf.WriteString(", ")
+			}
+			buf.WriteString("...")
+		}
+		buf.WriteString(")")
+		f.Name = buf.String()
+		f.Type = t.RetType
+		return f.String()
+	case *UnionType:
+		if isFakeTag(t.Tag) {
+			return fmt.Sprintf("%s %s", fakeUnionString(t), f.Name)
+		}
+		return fmt.Sprintf("%s %s", t, f.Name)
+	default:
+		return fmt.Sprintf("%s %s", t, f.Name)
+	}
+}
+
+// fakeUnionString returns the string representation of the given union with a
+// fake name.
+func fakeUnionString(t *UnionType) string {
+	buf := &strings.Builder{}
+	if t.Size > 0 {
+		fmt.Fprintf(buf, "// size = 0x%X\n", t.Size)
+	}
+	buf.WriteString("\tunion {\n")
+	for _, field := range t.Fields {
+		if field.Size > 0 {
+			fmt.Fprintf(buf, "\t\t// offset: %04X (%d bytes)\n", field.Offset, field.Size)
+		} else if len(t.Fields) > 1 && t.Fields[1].Offset > 0 {
+			fmt.Fprintf(buf, "\t\t// offset: %04X\n", field.Offset)
+		}
+		fmt.Fprintf(buf, "\t\t%s;\n", field)
+	}
+	buf.WriteString("\t}")
+	return buf.String()
+}
+
+// isFakeTag reports whether the tag name is fake (generated by the compiler for
+// symbols lacking a tag name).
+func isFakeTag(tag string) bool {
+	if strings.HasPrefix(tag, "_") && strings.HasSuffix(tag, "fake") {
+		s := tag[len("_") : len(tag)-len("fake")]
+		_, err := strconv.Atoi(s)
+		return err == nil
+	}
+	return false
 }
