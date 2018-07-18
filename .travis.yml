@@ -28,7 +28,7 @@ before_script:
 
 script:
   - ./goclean.sh
-  - golangci-lint run --enable-all
+  - golangci-lint run --enable-all -D "lll,maligned"
   # CodeClimate
   - go test -coverprofile c.out ./...
 

@@ -476,9 +476,9 @@ type Def2 struct {
 // String returns the string representation of the definition symbol.
 func (body *Def2) String() string {
 	// $00000000 96 Def2 class MOS type ARY INT size 4 dims 1 1 tag  name r
-	var dd []string
-	for _, dim := range body.Dims {
-		dd = append(dd, strconv.Itoa(int(dim)))
+	dd := make([]string, len(body.Dims))
+	for i, dim := range body.Dims {
+		dd[i] = strconv.Itoa(int(dim))
 	}
 	dims := fmt.Sprintf("%d %s", body.DimsLen, strings.Join(dd, " "))
 	if body.DimsLen == 0 {

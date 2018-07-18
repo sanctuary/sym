@@ -9,9 +9,10 @@ type Type uint16
 
 // String returns a string representation of the type.
 func (t Type) String() string {
-	var mods []string
-	for _, mod := range t.Mods() {
-		mods = append(mods, mod.String())
+	tMods := t.Mods()
+	mods := make([]string, len(tMods))
+	for i, mod := range tMods {
+		mods[i] = mod.String()
 	}
 	ss := append(mods, t.Base().String())
 	return strings.Join(ss, " ")
