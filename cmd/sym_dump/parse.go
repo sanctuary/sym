@@ -28,6 +28,56 @@ func parse(f *sym.File) *parser {
 
 // parseTypes parses the SYM types into the equivalent C types.
 func (p *parser) parseTypes(syms []*sym.Symbol) {
+	p.initTaggedTypes(syms)
+	p.structs["__vtbl_ptr_type"] = &c.StructType{
+		Tag: "__vtbl_ptr_type",
+	}
+	// Bool used for NULL type.
+	def := &c.Typedef{
+		Type: c.Int,
+		Name: "bool",
+	}
+	p.typedefs = append(p.typedefs, def)
+	p.types["bool"] = def
+	// Parse symbols.
+	for i := 0; i < len(syms); i++ {
+		s := syms[i]
+		// TODO: remove debug output once C output is mature.
+		//fmt.Fprintln(os.Stderr, "sym:", s)
+		switch body := s.Body.(type) {
+		case *sym.Def:
+			switch body.Class {
+			case sym.ClassSTRTAG:
+				n := p.parseClassSTRTAG(body, syms[i+1:])
+				i += n
+			case sym.ClassUNTAG:
+				n := p.parseClassUNTAG(body, syms[i+1:])
+				i += n
+			case sym.ClassTPDEF:
+				p.parseClassTPDEF(body.Type, body.Name, nil, "")
+			case sym.ClassENTAG:
+				n := p.parseClassENTAG(body, syms[i+1:])
+				i += n
+			default:
+				//dbg.Printf("support for class %q not yet implemented", body.Class)
+			}
+		case *sym.Def2:
+			switch body.Class {
+			case sym.ClassTPDEF:
+				p.parseClassTPDEF(body.Type, body.Name, body.Dims, body.Tag)
+			default:
+				//dbg.Printf("support for class %q not yet implemented", body.Class)
+			}
+		case *sym.Overlay:
+		// nothing to do.
+		default:
+			//dbg.Printf("support for symbol body %T not yet implemented", body)
+		}
+	}
+}
+
+// initTaggedTypes adds scaffolding types for structs, unions and enums.
+func (p *parser) initTaggedTypes(syms []*sym.Symbol) {
 	// Add scaffolding types for structs, unions and enums, so they may be
 	// referrenced before defined.
 	var (
@@ -75,51 +125,6 @@ func (p *parser) parseTypes(syms []*sym.Symbol) {
 				p.enums[tag] = t
 				p.enumTags = append(p.enumTags, tag)
 			}
-		}
-	}
-	p.structs["__vtbl_ptr_type"] = &c.StructType{
-		Tag: "__vtbl_ptr_type",
-	}
-	// Bool used for NULL type.
-	def := &c.Typedef{
-		Type: c.Int,
-		Name: "bool",
-	}
-	p.typedefs = append(p.typedefs, def)
-	p.types["bool"] = def
-	// Parse symbols.
-	for i := 0; i < len(syms); i++ {
-		s := syms[i]
-		// TODO: remove debug output once C output is mature.
-		//fmt.Fprintln(os.Stderr, "sym:", s)
-		switch body := s.Body.(type) {
-		case *sym.Def:
-			switch body.Class {
-			case sym.ClassSTRTAG:
-				n := p.parseClassSTRTAG(body, syms[i+1:])
-				i += n
-			case sym.ClassUNTAG:
-				n := p.parseClassUNTAG(body, syms[i+1:])
-				i += n
-			case sym.ClassTPDEF:
-				p.parseClassTPDEF(body.Type, body.Name, nil, "")
-			case sym.ClassENTAG:
-				n := p.parseClassENTAG(body, syms[i+1:])
-				i += n
-			default:
-				//dbg.Printf("support for class %q not yet implemented", body.Class)
-			}
-		case *sym.Def2:
-			switch body.Class {
-			case sym.ClassTPDEF:
-				p.parseClassTPDEF(body.Type, body.Name, body.Dims, body.Tag)
-			default:
-				//dbg.Printf("support for class %q not yet implemented", body.Class)
-			}
-		case *sym.Overlay:
-		// nothing to do.
-		default:
-			//dbg.Printf("support for symbol body %T not yet implemented", body)
 		}
 	}
 }
