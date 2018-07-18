@@ -1,3 +1,5 @@
+// The cel_dump tool converts Playstation 1 SYM files to C headers
+// (*.sym -> *.h).
 package main
 
 import (
