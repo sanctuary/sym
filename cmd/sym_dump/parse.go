@@ -19,8 +19,8 @@ var (
 	dbg = log.New(os.Stderr, term.Cyan("dbg:")+" ", log.Lshortfile)
 )
 
-// dumpC outputs the SYM file as C headers.
-func dumpC(f *sym.File) error {
+// parse parses the SYM file into equivalent C declarations.
+func parse(f *sym.File) *parser {
 	// Add scaffolding types for structs, unions and enums, so they may be
 	// referrenced before defined.
 	p := newParser()
@@ -118,8 +118,7 @@ func dumpC(f *sym.File) error {
 			dbg.Printf("support for symbol body %T not yet implemented", body)
 		}
 	}
-	p.dump()
-	return nil
+	return p
 }
 
 // parser tracks type information used for parsing.
@@ -152,32 +151,6 @@ func newParser() *parser {
 		enums:            make(map[string]*c.EnumType),
 		types:            make(map[string]*c.Typedef),
 		uniqueEnumMember: make(map[string]bool),
-	}
-}
-
-// dump outputs the type information recorded by the parser as a C header.
-func (p *parser) dump() {
-	// Print predeclared identifiers.
-	def := p.types["bool"]
-	fmt.Println(def.Def())
-	// Print enums.
-	for _, tag := range p.enumTags {
-		t := p.enums[tag]
-		fmt.Printf("%s;\n", t.Def())
-	}
-	// Print structs.
-	for _, tag := range p.structTags {
-		t := p.structs[tag]
-		fmt.Printf("%s;\n", t.Def())
-	}
-	// Print unions.
-	for _, tag := range p.unionTags {
-		t := p.unions[tag]
-		fmt.Printf("%s;\n", t.Def())
-	}
-	// Print typedefs.
-	for _, def := range p.typedefs {
-		fmt.Println(def.Def())
 	}
 }
 

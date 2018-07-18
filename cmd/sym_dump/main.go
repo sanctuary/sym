@@ -35,9 +35,8 @@ func main() {
 		switch {
 		case outputC:
 			// Output C headers.
-			if err := dumpC(f); err != nil {
-				log.Fatalf("%+v", err)
-			}
+			p := parse(f)
+			dumpTypes(p)
 		default:
 			// Output in Psy-Q DUMPSYM.EXE format.
 			fmt.Println(f)
