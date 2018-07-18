@@ -1,5 +1,9 @@
 # sym
 
+[![Build Status](https://travis-ci.org/sanctuary/sym.svg)](https://travis-ci.org/sanctuary/sym)
+[![Coverage Status](https://coveralls.io/repos/github/sanctuary/sym/badge.svg)](https://coveralls.io/github/sanctuary/sym)
+[![GoDoc](https://godoc.org/github.com/sanctuary/sym?status.svg)](https://godoc.org/github.com/sanctuary/sym)
+
 Parse Playstation 1 symbol files (`*.SYM`).
 
 ## Installation
