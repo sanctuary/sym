@@ -1,0 +1,26 @@
+language: go
+
+notifications:
+  email: false
+
+env:
+  global:
+    - PATH=$HOME/gopath/bin:$PATH
+
+before_install:
+  - go get -u golang.org/x/tools/cmd/cover
+  - go get -u golang.org/x/tools/cmd/goimports
+  - go get -u github.com/golang/lint/golint
+  - go get -u github.com/mattn/goveralls
+  - go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+
+install:
+  - go get -t -v ./...
+
+before_script:
+  - wget https://gist.github.com/mewmew/379014c9a2e6885e238d/raw/goclean.sh
+  - chmod +x goclean.sh
+
+script:
+  - ./goclean.sh
+  - golangci-lint run --enable-all
