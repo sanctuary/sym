@@ -10,6 +10,8 @@ go get -u github.com/sanctuary/sym/cmd/sym_dump
 
 ## Usage
 
+The default output of `sym_dump` is in Psy-Q format and is identical to the `DUMPSYM.EXE` tool of the [Psy-Q SDK](http://www.psxdev.net/help/psyq_install.html).
+
 ```bash
 sym_dump DIABPSX.SYM
 # Output:
@@ -24,5 +26,3 @@ sym_dump DIABPSX.SYM
 # 000049: $80139bf8 overlay length $0001ec70 id $e
 # 000056: $00000000 94 Def class TPDEF type UCHAR size 0 name u_char
 ```
-
-The output of `sym_dump` is identical to the `DUMPSYM.EXE` tool of the [Psy-Q SDK](http://www.psxdev.net/help/psyq_install.html).
