@@ -21,16 +21,21 @@ var (
 
 // parse parses the SYM file into equivalent C declarations.
 func parse(f *sym.File) *parser {
+	p := newParser()
+	p.parseTypes(f.Syms)
+	return p
+}
+
+// parseTypes parses the SYM types into the equivalent C types.
+func (p *parser) parseTypes(syms []*sym.Symbol) {
 	// Add scaffolding types for structs, unions and enums, so they may be
 	// referrenced before defined.
-	p := newParser()
-	// TODO: parse all symbols.
 	var (
 		uniqueStruct = make(map[string]bool)
 		uniqueUnion  = make(map[string]bool)
 		uniqueEnum   = make(map[string]bool)
 	)
-	for _, s := range f.Syms[:7117] {
+	for _, s := range syms {
 		switch body := s.Body.(type) {
 		case *sym.Def:
 			switch body.Class {
@@ -83,42 +88,40 @@ func parse(f *sym.File) *parser {
 	p.typedefs = append(p.typedefs, def)
 	p.types["bool"] = def
 	// Parse symbols.
-	// TODO: parse all symbols.
-	for i := 0; i < len(f.Syms[:7117]); i++ {
-		s := f.Syms[i]
+	for i := 0; i < len(syms); i++ {
+		s := syms[i]
 		// TODO: remove debug output once C output is mature.
-		fmt.Fprintln(os.Stderr, "sym:", s)
+		//fmt.Fprintln(os.Stderr, "sym:", s)
 		switch body := s.Body.(type) {
 		case *sym.Def:
 			switch body.Class {
 			case sym.ClassSTRTAG:
-				n := p.parseClassSTRTAG(body, f.Syms[i+1:])
+				n := p.parseClassSTRTAG(body, syms[i+1:])
 				i += n
 			case sym.ClassUNTAG:
-				n := p.parseClassUNTAG(body, f.Syms[i+1:])
+				n := p.parseClassUNTAG(body, syms[i+1:])
 				i += n
 			case sym.ClassTPDEF:
 				p.parseClassTPDEF(body.Type, body.Name, nil, "")
 			case sym.ClassENTAG:
-				n := p.parseClassENTAG(body, f.Syms[i+1:])
+				n := p.parseClassENTAG(body, syms[i+1:])
 				i += n
 			default:
-				dbg.Printf("support for class %q not yet implemented", body.Class)
+				//dbg.Printf("support for class %q not yet implemented", body.Class)
 			}
 		case *sym.Def2:
 			switch body.Class {
 			case sym.ClassTPDEF:
 				p.parseClassTPDEF(body.Type, body.Name, body.Dims, body.Tag)
 			default:
-				dbg.Printf("support for class %q not yet implemented", body.Class)
+				//dbg.Printf("support for class %q not yet implemented", body.Class)
 			}
 		case *sym.Overlay:
 		// nothing to do.
 		default:
-			dbg.Printf("support for symbol body %T not yet implemented", body)
+			//dbg.Printf("support for symbol body %T not yet implemented", body)
 		}
 	}
-	return p
 }
 
 // parser tracks type information used for parsing.
@@ -157,12 +160,12 @@ func newParser() *parser {
 // parseClassSTRTAG parses a struct tag sequence of symbols.
 func (p *parser) parseClassSTRTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 	if base := body.Type.Base(); base != sym.BaseStruct {
-		panic(fmt.Sprintf("support for base type %q not yet implemented", base))
+		panic(fmt.Errorf("support for base type %q not yet implemented", base))
 	}
 	name := validName(body.Name)
 	t, ok := p.structs[name]
 	if !ok {
-		panic(fmt.Sprintf("unable to locate struct %q", name))
+		panic(fmt.Errorf("unable to locate struct %q", name))
 	}
 	if len(t.Fields) > 0 {
 		log.Printf("duplicate struct tag %q symbol", name)
@@ -196,7 +199,7 @@ func (p *parser) parseClassSTRTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 				}
 				t.Fields = append(t.Fields, field)
 			default:
-				panic(fmt.Sprintf("support for class %q not yet implemented", body.Class))
+				panic(fmt.Errorf("support for class %q not yet implemented", body.Class))
 			}
 		case *sym.Def2:
 			switch body.Class {
@@ -211,7 +214,7 @@ func (p *parser) parseClassSTRTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 			case sym.ClassEOS:
 				return n + 1
 			default:
-				panic(fmt.Sprintf("support for class %q not yet implemented", body.Class))
+				panic(fmt.Errorf("support for class %q not yet implemented", body.Class))
 			}
 		}
 	}
@@ -221,12 +224,12 @@ func (p *parser) parseClassSTRTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 // parseClassUNTAG parses a union tag sequence of symbols.
 func (p *parser) parseClassUNTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 	if base := body.Type.Base(); base != sym.BaseUnion {
-		panic(fmt.Sprintf("support for base type %q not yet implemented", base))
+		panic(fmt.Errorf("support for base type %q not yet implemented", base))
 	}
 	name := validName(body.Name)
 	t, ok := p.unions[name]
 	if !ok {
-		panic(fmt.Sprintf("unable to locate union %q", name))
+		panic(fmt.Errorf("unable to locate union %q", name))
 	}
 	for n = 0; n < len(syms); n++ {
 		s := syms[n]
@@ -242,7 +245,7 @@ func (p *parser) parseClassUNTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 				}
 				t.Fields = append(t.Fields, field)
 			default:
-				panic(fmt.Sprintf("support for class %q not yet implemented", body.Class))
+				panic(fmt.Errorf("support for class %q not yet implemented", body.Class))
 			}
 		case *sym.Def2:
 			switch body.Class {
@@ -257,7 +260,7 @@ func (p *parser) parseClassUNTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 			case sym.ClassEOS:
 				return n + 1
 			default:
-				panic(fmt.Sprintf("support for class %q not yet implemented", body.Class))
+				panic(fmt.Errorf("support for class %q not yet implemented", body.Class))
 			}
 		}
 	}
@@ -278,12 +281,12 @@ func (p *parser) parseClassTPDEF(t sym.Type, name string, dims []uint32, tag str
 // parseClassENTAG parses an enum tag sequence of symbols.
 func (p *parser) parseClassENTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 	if base := body.Type.Base(); base != sym.BaseEnum {
-		panic(fmt.Sprintf("support for base type %q not yet implemented", base))
+		panic(fmt.Errorf("support for base type %q not yet implemented", base))
 	}
 	name := validName(body.Name)
 	t, ok := p.enums[name]
 	if !ok {
-		panic(fmt.Sprintf("unable to locate enum %q", name))
+		panic(fmt.Errorf("unable to locate enum %q", name))
 	}
 	for n = 0; n < len(syms); n++ {
 		s := syms[n]
@@ -302,14 +305,14 @@ func (p *parser) parseClassENTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 				}
 				t.Members = append(t.Members, member)
 			default:
-				panic(fmt.Sprintf("support for class %q not yet implemented", body.Class))
+				panic(fmt.Errorf("support for class %q not yet implemented", body.Class))
 			}
 		case *sym.Def2:
 			switch body.Class {
 			case sym.ClassEOS:
 				return n + 1
 			default:
-				panic(fmt.Sprintf("support for class %q not yet implemented", body.Class))
+				panic(fmt.Errorf("support for class %q not yet implemented", body.Class))
 			}
 		}
 	}
@@ -318,7 +321,7 @@ func (p *parser) parseClassENTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 
 // ### [ Helper functions ] ####################################################
 
-// parseBase parses the SYM type into the equivalent C type.
+// parseType parses the SYM type into the equivalent C type.
 func (p *parser) parseType(t sym.Type, dims []uint32, tag string) c.Type {
 	u := p.parseBase(t.Base(), tag)
 	return parseMods(u, t.Mods(), dims)
@@ -343,19 +346,19 @@ func (p *parser) parseBase(base sym.Base, tag string) c.Type {
 	case sym.BaseStruct:
 		t, ok := p.structs[tag]
 		if !ok {
-			panic(fmt.Sprintf("unable to locate struct %q", tag))
+			panic(fmt.Errorf("unable to locate struct %q", tag))
 		}
 		return t
 	case sym.BaseUnion:
 		t, ok := p.unions[tag]
 		if !ok {
-			panic(fmt.Sprintf("unable to locate union %q", tag))
+			panic(fmt.Errorf("unable to locate union %q", tag))
 		}
 		return t
 	case sym.BaseEnum:
 		t, ok := p.enums[tag]
 		if !ok {
-			panic(fmt.Sprintf("unable to locate enum %q", tag))
+			panic(fmt.Errorf("unable to locate enum %q", tag))
 		}
 		return t
 	//case sym.BaseMOE:
@@ -368,7 +371,7 @@ func (p *parser) parseBase(base sym.Base, tag string) c.Type {
 	case sym.BaseULong:
 		return c.ULong
 	default:
-		panic(fmt.Sprintf("base type %q not yet supported", base))
+		panic(fmt.Errorf("base type %q not yet supported", base))
 	}
 }
 
