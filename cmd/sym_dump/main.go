@@ -21,10 +21,13 @@ Convert Playstation 1 SYM files to C headers (*.sym -> *.h) and scripts for impo
 func main() {
 	// Command line flags.
 	var (
-		// Output C headers.
+		// Output C types and declarations.
 		outputC bool
+		// Output C types.
+		outputTypes bool
 	)
-	flag.BoolVar(&outputC, "c", false, "output C headers")
+	flag.BoolVar(&outputC, "c", false, "output C types and declarations")
+	flag.BoolVar(&outputTypes, "types", false, "output C types")
 	flag.Usage = usage
 	flag.Parse()
 	for _, path := range flag.Args() {
@@ -34,10 +37,14 @@ func main() {
 		}
 		switch {
 		case outputC:
-			// Output C headers.
+			// Output C types and declarations.
 			p := parse(f)
 			dumpTypes(p)
 			dumpDecls(p)
+		case outputTypes:
+			// Output C types.
+			p := parse(f)
+			dumpTypes(p)
 		default:
 			// Output in Psy-Q DUMPSYM.EXE format.
 			fmt.Println(f)

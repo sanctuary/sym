@@ -35,14 +35,10 @@ type FuncDecl struct {
 	Address uint32
 	// Size (optional).
 	Size uint32
-	// Return type
-	RetType Type
-	// Function name.
-	Name string
-	// Function parameters.
-	Params []Var
-	// Variadic.
-	Variadic bool
+	// Underlying function variable.
+	Var
+	// Local variables.
+	Locals []Var
 }
 
 // String returns the string representation of the function declaration.
@@ -54,20 +50,7 @@ func (f *FuncDecl) String() string {
 	if f.Size > 0 {
 		fmt.Fprintf(buf, "// size: 0x%X\n", f.Size)
 	}
-	// int (*)(int a, int b)
-	fmt.Fprintf(buf, "%s %s(", f.RetType, f.Name)
-	for i, param := range f.Params {
-		if i > 0 {
-			buf.WriteString(", ")
-		}
-		buf.WriteString(param.String())
-	}
-	if f.Variadic {
-		if len(f.Params) > 0 {
-			buf.WriteString(", ")
-		}
-		buf.WriteString("...")
-	}
-	buf.WriteString(")")
+	buf.WriteString(f.Var.String())
+	// TODO: Output local variables.
 	return buf.String()
 }

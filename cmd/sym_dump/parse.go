@@ -57,39 +57,29 @@ func (p *parser) parseClassEXT(addr, size uint32, t sym.Type, dims []uint32, tag
 		name = duplicatePrefix + name
 	}
 	cType := p.parseType(t, dims, tag)
-	/*
-		if funcType, ok := cType.(*c.FuncType); ok {
-			var params []c.Var
-			for i, param := range funcType.Params {
-				p := c.Var{
-					Type: param.Type,
-					Name: fmt.Sprintf("a%d", i),
-				}
-				params = append(params, p)
-			}
-			f := &c.FuncDecl{
-				Address:  addr,
-				Size:     size,
-				RetType:  funcType.RetType,
-				Name:     name,
-				Params:   params,
-				Variadic: funcType.Variadic,
-			}
-			p.funcs = append(p.funcs, f)
-			p.funcNames[name] = f
-		} else {
-	*/
-	v := &c.VarDecl{
-		Address: addr,
-		Size:    size,
-		Var: c.Var{
-			Type: cType,
-			Name: name,
-		},
+	if funcType, ok := cType.(*c.FuncType); ok {
+		f := &c.FuncDecl{
+			Address: addr,
+			Size:    size,
+			Var: c.Var{
+				Type: funcType,
+				Name: name,
+			},
+		}
+		p.funcs = append(p.funcs, f)
+		p.funcNames[name] = f
+	} else {
+		v := &c.VarDecl{
+			Address: addr,
+			Size:    size,
+			Var: c.Var{
+				Type: cType,
+				Name: name,
+			},
+		}
+		p.vars = append(p.vars, v)
+		p.varNames[name] = v
 	}
-	p.vars = append(p.vars, v)
-	p.varNames[name] = v
-	//}
 }
 
 // parseTypes parses the SYM types into the equivalent C types.
