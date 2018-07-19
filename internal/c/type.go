@@ -32,17 +32,12 @@ func (t *Typedef) String() string {
 
 // Def returns the C syntax representation of the definition of the type.
 func (t *Typedef) Def() string {
-	switch t.Type.(type) {
-	case BaseType:
-		return fmt.Sprintf("typedef %s %s;", t.Type, t.Name)
-	default:
-		// HACK, but works. The syntax of the C type system is pre-historic.
-		v := Var{
-			Type: t.Type,
-			Name: t.Name,
-		}
-		return fmt.Sprintf("typedef %s;", v)
+	// HACK, but works. The syntax of the C type system is pre-historic.
+	v := Var{
+		Type: t.Type,
+		Name: t.Name,
 	}
+	return fmt.Sprintf("typedef %s", v)
 }
 
 // --- [ Base type ] -----------------------------------------------------------
@@ -70,24 +65,6 @@ func (t BaseType) Def() string {
 	return t.String()
 }
 
-// --- [ Pointer type ] --------------------------------------------------------
-
-// PointerType is a pointer type.
-type PointerType struct {
-	// Element type.
-	Elem Type
-}
-
-// String returns the string representation of the pointer type.
-func (t *PointerType) String() string {
-	return fmt.Sprintf("%s*", t.Elem)
-}
-
-// Def returns the C syntax representation of the definition of the type.
-func (t *PointerType) Def() string {
-	return t.String()
-}
-
 // --- [ Struct type ] ---------------------------------------------------------
 
 // StructType is a structure type.
@@ -109,7 +86,7 @@ func (t *StructType) String() string {
 func (t *StructType) Def() string {
 	buf := &strings.Builder{}
 	if t.Size > 0 {
-		fmt.Fprintf(buf, "// size = 0x%X\n", t.Size)
+		fmt.Fprintf(buf, "// size: 0x%X\n", t.Size)
 	}
 	if len(t.Tag) > 0 {
 		fmt.Fprintf(buf, "struct %s {\n", t.Tag)
@@ -122,7 +99,6 @@ func (t *StructType) Def() string {
 		} else if len(t.Fields) > 1 && t.Fields[1].Offset > 0 {
 			fmt.Fprintf(buf, "\t// offset: %04X\n", field.Offset)
 		}
-		// TODO: figure out how to print struct fields using type spiral rule.
 		fmt.Fprintf(buf, "\t%s;\n", field)
 	}
 	buf.WriteString("}")
@@ -150,7 +126,7 @@ func (t *UnionType) String() string {
 func (t *UnionType) Def() string {
 	buf := &strings.Builder{}
 	if t.Size > 0 {
-		fmt.Fprintf(buf, "// size = 0x%X\n", t.Size)
+		fmt.Fprintf(buf, "// size: 0x%X\n", t.Size)
 	}
 	if len(t.Tag) > 0 {
 		fmt.Fprintf(buf, "union %s {\n", t.Tag)
@@ -193,12 +169,14 @@ func (t *EnumType) Def() string {
 		buf.WriteString("enum {\n")
 	}
 	less := func(i, j int) bool {
+		if t.Members[i].Value == t.Members[j].Value {
+			return t.Members[i].Name < t.Members[j].Name
+		}
 		return t.Members[i].Value < t.Members[j].Value
 	}
 	sort.Slice(t.Members, less)
 	w := tabwriter.NewWriter(buf, 1, 3, 1, ' ', tabwriter.TabIndent)
 	for _, member := range t.Members {
-		// TODO: use tabwriter.
 		fmt.Fprintf(w, "\t%s\t= %d,\n", member.Name, member.Value)
 	}
 	if err := w.Flush(); err != nil {
@@ -218,6 +196,24 @@ type EnumMember struct {
 	Name string
 }
 
+// --- [ Pointer type ] --------------------------------------------------------
+
+// PointerType is a pointer type.
+type PointerType struct {
+	// Element type.
+	Elem Type
+}
+
+// String returns the string representation of the pointer type.
+func (t *PointerType) String() string {
+	return fmt.Sprintf("%s*", t.Elem)
+}
+
+// Def returns the C syntax representation of the definition of the type.
+func (t *PointerType) Def() string {
+	return t.String()
+}
+
 // --- [ Array type ] ----------------------------------------------------------
 
 // ArrayType is an array type.
@@ -230,7 +226,10 @@ type ArrayType struct {
 
 // String returns the string representation of the array type.
 func (t *ArrayType) String() string {
-	return fmt.Sprintf("%s[%d]", t.Elem, t.Len)
+	if t.Len > 0 {
+		return fmt.Sprintf("%s[%d]", t.Elem, t.Len)
+	}
+	return fmt.Sprintf("%s[]", t.Elem)
 }
 
 // Def returns the C syntax representation of the definition of the type.
@@ -252,23 +251,9 @@ type FuncType struct {
 
 // String returns the string representation of the function type.
 func (t *FuncType) String() string {
-	buf := &strings.Builder{}
-	// int (*)(int a, int b)
-	fmt.Fprintf(buf, "%s ()(", t.RetType)
-	for i, param := range t.Params {
-		if i > 0 {
-			buf.WriteString(", ")
-		}
-		buf.WriteString(param.String())
-	}
-	if t.Variadic {
-		if len(t.Params) > 0 {
-			buf.WriteString(", ")
-		}
-		buf.WriteString("...")
-	}
-	buf.WriteString(")")
-	return buf.String()
+	// HACK, but works. The syntax of the C type system is pre-historic.
+	v := Var{Type: t}
+	return v.String()
 }
 
 // Def returns the C syntax representation of the definition of the type.
@@ -288,8 +273,7 @@ type Field struct {
 	Var
 }
 
-// A Var represents a variable declaration, a function parameter, or a field in
-// a structure type or union type.
+// A Var represents a variable declaration or function parameter.
 type Var struct {
 	// Variable type.
 	Type Type
@@ -302,12 +286,22 @@ func (v Var) String() string {
 	switch t := v.Type.(type) {
 	case *PointerType:
 		// HACK, but works. The syntax of the C type system is pre-historic.
-		v.Name = fmt.Sprintf("*%s", v.Name)
+		switch t.Elem.(type) {
+		case *FuncType, *ArrayType:
+			// Add grouping parenthesis.
+			v.Name = fmt.Sprintf("(*%s)", v.Name)
+		default:
+			v.Name = fmt.Sprintf("*%s", v.Name)
+		}
 		v.Type = t.Elem
 		return v.String()
 	case *ArrayType:
 		// HACK, but works. The syntax of the C type system is pre-historic.
-		v.Name = fmt.Sprintf("%s[%d]", v.Name, t.Len)
+		if t.Len > 0 {
+			v.Name = fmt.Sprintf("%s[%d]", v.Name, t.Len)
+		} else {
+			v.Name = fmt.Sprintf("%s[]", v.Name)
+		}
 		v.Type = t.Elem
 		return v.String()
 	case *FuncType:
@@ -345,7 +339,7 @@ func (v Var) String() string {
 func fakeUnionString(t *UnionType) string {
 	buf := &strings.Builder{}
 	if t.Size > 0 {
-		fmt.Fprintf(buf, "// size = 0x%X\n", t.Size)
+		fmt.Fprintf(buf, "// size: 0x%X\n", t.Size)
 	}
 	buf.WriteString("\tunion {\n")
 	for _, field := range t.Fields {

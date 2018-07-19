@@ -95,16 +95,6 @@ func (p *parser) parseClassEXT(addr, size uint32, t sym.Type, dims []uint32, tag
 // parseTypes parses the SYM types into the equivalent C types.
 func (p *parser) parseTypes(syms []*sym.Symbol) {
 	p.initTaggedTypes(syms)
-	p.structs["__vtbl_ptr_type"] = &c.StructType{
-		Tag: "__vtbl_ptr_type",
-	}
-	// Bool used for NULL type.
-	def := &c.Typedef{
-		Type: c.Int,
-		Name: "bool",
-	}
-	p.typedefs = append(p.typedefs, def)
-	p.types["bool"] = def
 	// Parse symbols.
 	for i := 0; i < len(syms); i++ {
 		s := syms[i]
@@ -146,6 +136,17 @@ func (p *parser) parseTypes(syms []*sym.Symbol) {
 func (p *parser) initTaggedTypes(syms []*sym.Symbol) {
 	// Add scaffolding types for structs, unions and enums, so they may be
 	// referrenced before defined.
+	vtblPtrType := &c.StructType{
+		Tag: "__vtbl_ptr_type",
+	}
+	p.structs["__vtbl_ptr_type"] = vtblPtrType
+	p.structTags = append(p.structTags, "__vtbl_ptr_type")
+	// Bool used for NULL type.
+	boolDef := &c.Typedef{
+		Type: c.Int,
+		Name: "bool",
+	}
+	p.types["bool"] = boolDef
 	var (
 		uniqueStruct = make(map[string]bool)
 		uniqueUnion  = make(map[string]bool)

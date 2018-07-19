@@ -4,8 +4,10 @@ import (
 	"strings"
 )
 
-// Type specifies the type of a definition. A type is made up of a 4-bit basic
-// type specifyer, and a set of 2-bit type modifiers.
+// Type specifies the type of a definition.
+//
+// A type is made up of a 4-bit basic type specifyer, and a set of 2-bit type
+// modifiers.
 //
 //    Basic type                                            xxxx
 //       Modifier                                        xx

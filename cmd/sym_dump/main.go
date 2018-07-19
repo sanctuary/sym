@@ -36,7 +36,7 @@ func main() {
 		case outputC:
 			// Output C headers.
 			p := parse(f)
-			//dumpTypes(p)
+			dumpTypes(p)
 			dumpDecls(p)
 		default:
 			// Output in Psy-Q DUMPSYM.EXE format.

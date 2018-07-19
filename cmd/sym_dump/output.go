@@ -6,7 +6,7 @@ import "fmt"
 func dumpTypes(p *parser) {
 	// Print predeclared identifiers.
 	def := p.types["bool"]
-	fmt.Printf("%s\n\n", def.Def())
+	fmt.Printf("%s;\n\n", def.Def())
 	// Print enums.
 	for _, tag := range p.enumTags {
 		t := p.enums[tag]
@@ -24,7 +24,7 @@ func dumpTypes(p *parser) {
 	}
 	// Print typedefs.
 	for _, def := range p.typedefs {
-		fmt.Printf("%s\n\n", def.Def()) // TODO: add semicolon for consistency?
+		fmt.Printf("%s;\n\n", def.Def())
 	}
 }
 
