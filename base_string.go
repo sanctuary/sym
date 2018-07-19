@@ -4,24 +4,13 @@ package sym
 
 import "strconv"
 
-const (
-	_Base_name_0 = "NULLVOIDCHARSHORTINTLONG"
-	_Base_name_1 = "STRUCTUNIONENUMMOEUCHARUSHORTUINTULONG"
-)
+const _Base_name = "NULLVOIDCHARSHORTINTLONGFLOATDOUBLESTRUCTUNIONENUMMOEUCHARUSHORTUINTULONG"
 
-var (
-	_Base_index_0 = [...]uint8{0, 4, 8, 12, 17, 20, 24}
-	_Base_index_1 = [...]uint8{0, 6, 11, 15, 18, 23, 29, 33, 38}
-)
+var _Base_index = [...]uint8{0, 4, 8, 12, 17, 20, 24, 29, 35, 41, 46, 50, 53, 58, 64, 68, 73}
 
 func (i Base) String() string {
-	switch {
-	case 0 <= i && i <= 5:
-		return _Base_name_0[_Base_index_0[i]:_Base_index_0[i+1]]
-	case 8 <= i && i <= 15:
-		i -= 8
-		return _Base_name_1[_Base_index_1[i]:_Base_index_1[i+1]]
-	default:
+	if i >= Base(len(_Base_index)-1) {
 		return "Base(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
+	return _Base_name[_Base_index[i]:_Base_index[i+1]]
 }

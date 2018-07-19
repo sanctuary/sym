@@ -24,6 +24,18 @@ func dumpTypes(p *parser) {
 	}
 	// Print typedefs.
 	for _, def := range p.typedefs {
-		fmt.Printf("%s\n\n", def.Def())
+		fmt.Printf("%s\n\n", def.Def()) // TODO: add semicolon for consistency?
+	}
+}
+
+// dumpDecls outputs the declarations recorded by the parser as a C header.
+func dumpDecls(p *parser) {
+	// Print variable declarations.
+	for _, v := range p.vars {
+		fmt.Printf("%s;\n\n", v)
+	}
+	// Print function declarations.
+	for _, f := range p.funcs {
+		fmt.Printf("%s;\n\n", f)
 	}
 }

@@ -37,11 +37,11 @@ func (t *Typedef) Def() string {
 		return fmt.Sprintf("typedef %s %s;", t.Type, t.Name)
 	default:
 		// HACK, but works. The syntax of the C type system is pre-historic.
-		field := Field{
+		v := Var{
 			Type: t.Type,
 			Name: t.Name,
 		}
-		return fmt.Sprintf("typedef %s;", field)
+		return fmt.Sprintf("typedef %s;", v)
 	}
 }
 
@@ -245,7 +245,7 @@ type FuncType struct {
 	// Return type.
 	RetType Type
 	// Function parameters.
-	Params []Field
+	Params []Var
 	// Variadic function.
 	Variadic bool
 }
@@ -254,7 +254,7 @@ type FuncType struct {
 func (t *FuncType) String() string {
 	buf := &strings.Builder{}
 	// int (*)(int a, int b)
-	fmt.Fprintf(buf, "%s (*)(", t.RetType)
+	fmt.Fprintf(buf, "%s ()(", t.RetType)
 	for i, param := range t.Params {
 		if i > 0 {
 			buf.WriteString(", ")
@@ -278,36 +278,42 @@ func (t *FuncType) Def() string {
 
 // ### [ Helper types ] ########################################################
 
-// A Field represents a function parameter, or a field in a structure type or
-// union type.
+// A Field represents a field in a structure type or union type.
 type Field struct {
 	// Offset (optional).
 	Offset uint32
 	// Size in bytes (optional).
 	Size uint32
-	// Field type.
+	// Underlying variable.
+	Var
+}
+
+// A Var represents a variable declaration, a function parameter, or a field in
+// a structure type or union type.
+type Var struct {
+	// Variable type.
 	Type Type
-	// Field name.
+	// Variable name.
 	Name string
 }
 
-// String returns the string representation of the field.
-func (f Field) String() string {
-	switch t := f.Type.(type) {
+// String returns the string representation of the variable.
+func (v Var) String() string {
+	switch t := v.Type.(type) {
 	case *PointerType:
 		// HACK, but works. The syntax of the C type system is pre-historic.
-		f.Name = fmt.Sprintf("*%s", f.Name)
-		f.Type = t.Elem
-		return f.String()
+		v.Name = fmt.Sprintf("*%s", v.Name)
+		v.Type = t.Elem
+		return v.String()
 	case *ArrayType:
 		// HACK, but works. The syntax of the C type system is pre-historic.
-		f.Name = fmt.Sprintf("%s[%d]", f.Name, t.Len)
-		f.Type = t.Elem
-		return f.String()
+		v.Name = fmt.Sprintf("%s[%d]", v.Name, t.Len)
+		v.Type = t.Elem
+		return v.String()
 	case *FuncType:
 		// HACK, but works. The syntax of the C type system is pre-historic.
 		buf := &strings.Builder{}
-		fmt.Fprintf(buf, "(%s)(", f.Name)
+		fmt.Fprintf(buf, "%s(", v.Name)
 		for i, param := range t.Params {
 			if i != 0 {
 				buf.WriteString(", ")
@@ -321,16 +327,16 @@ func (f Field) String() string {
 			buf.WriteString("...")
 		}
 		buf.WriteString(")")
-		f.Name = buf.String()
-		f.Type = t.RetType
-		return f.String()
+		v.Name = buf.String()
+		v.Type = t.RetType
+		return v.String()
 	case *UnionType:
 		if isFakeTag(t.Tag) {
-			return fmt.Sprintf("%s %s", fakeUnionString(t), f.Name)
+			return fmt.Sprintf("%s %s", fakeUnionString(t), v.Name)
 		}
-		return fmt.Sprintf("%s %s", t, f.Name)
+		return fmt.Sprintf("%s %s", t, v.Name)
 	default:
-		return fmt.Sprintf("%s %s", t, f.Name)
+		return fmt.Sprintf("%s %s", t, v.Name)
 	}
 }
 

@@ -23,7 +23,73 @@ var (
 func parse(f *sym.File) *parser {
 	p := newParser()
 	p.parseTypes(f.Syms)
+	p.parseDecls(f.Syms)
 	return p
+}
+
+// parseDecls parses the SYM symbols into the equivalent C declarations.
+func (p *parser) parseDecls(syms []*sym.Symbol) {
+	for i := 0; i < len(syms); i++ {
+		s := syms[i]
+		switch body := s.Body.(type) {
+		case *sym.Def:
+			switch body.Class {
+			case sym.ClassEXT, sym.ClassSTAT:
+				// TODO: figure out how EXT and STAT differ.
+				p.parseClassEXT(s.Hdr.Value, body.Size, body.Type, nil, "", body.Name)
+			}
+		case *sym.Def2:
+			switch body.Class {
+			case sym.ClassEXT, sym.ClassSTAT:
+				// TODO: figure out how EXT and STAT differ.
+				p.parseClassEXT(s.Hdr.Value, body.Size, body.Type, body.Dims, body.Tag, body.Name)
+			}
+		}
+	}
+}
+
+// parseClassEXT parses an EXT symbol.
+func (p *parser) parseClassEXT(addr, size uint32, t sym.Type, dims []uint32, tag, name string) {
+	name = validName(name)
+	if _, ok := p.varNames[name]; ok {
+		name = duplicatePrefix + name
+	} else if _, ok := p.funcNames[name]; ok {
+		name = duplicatePrefix + name
+	}
+	cType := p.parseType(t, dims, tag)
+	/*
+		if funcType, ok := cType.(*c.FuncType); ok {
+			var params []c.Var
+			for i, param := range funcType.Params {
+				p := c.Var{
+					Type: param.Type,
+					Name: fmt.Sprintf("a%d", i),
+				}
+				params = append(params, p)
+			}
+			f := &c.FuncDecl{
+				Address:  addr,
+				Size:     size,
+				RetType:  funcType.RetType,
+				Name:     name,
+				Params:   params,
+				Variadic: funcType.Variadic,
+			}
+			p.funcs = append(p.funcs, f)
+			p.funcNames[name] = f
+		} else {
+	*/
+	v := &c.VarDecl{
+		Address: addr,
+		Size:    size,
+		Var: c.Var{
+			Type: cType,
+			Name: name,
+		},
+	}
+	p.vars = append(p.vars, v)
+	p.varNames[name] = v
+	//}
 }
 
 // parseTypes parses the SYM types into the equivalent C types.
@@ -54,7 +120,7 @@ func (p *parser) parseTypes(syms []*sym.Symbol) {
 				n := p.parseClassUNTAG(body, syms[i+1:])
 				i += n
 			case sym.ClassTPDEF:
-				p.parseClassTPDEF(body.Type, body.Name, nil, "")
+				p.parseClassTPDEF(body.Type, nil, "", body.Name)
 			case sym.ClassENTAG:
 				n := p.parseClassENTAG(body, syms[i+1:])
 				i += n
@@ -64,7 +130,7 @@ func (p *parser) parseTypes(syms []*sym.Symbol) {
 		case *sym.Def2:
 			switch body.Class {
 			case sym.ClassTPDEF:
-				p.parseClassTPDEF(body.Type, body.Name, body.Dims, body.Tag)
+				p.parseClassTPDEF(body.Type, body.Dims, body.Tag, body.Name)
 			default:
 				//dbg.Printf("support for class %q not yet implemented", body.Class)
 			}
@@ -131,6 +197,8 @@ func (p *parser) initTaggedTypes(syms []*sym.Symbol) {
 
 // parser tracks type information used for parsing.
 type parser struct {
+	// Type information.
+
 	// structs maps from struct tag to struct type.
 	structs map[string]*c.StructType
 	// unions maps from union tag to union type.
@@ -149,6 +217,17 @@ type parser struct {
 	typedefs []*c.Typedef
 	// Tracks unique enum member names.
 	uniqueEnumMember map[string]bool
+
+	// Declarations.
+
+	// Variable delcarations.
+	vars []*c.VarDecl
+	// Function delcarations.
+	funcs []*c.FuncDecl
+	// varNames maps from variable name to variable declaration.
+	varNames map[string]*c.VarDecl
+	// funcNames maps from function name to function declaration.
+	funcNames map[string]*c.FuncDecl
 }
 
 // newParser returns a new parser.
@@ -159,6 +238,8 @@ func newParser() *parser {
 		enums:            make(map[string]*c.EnumType),
 		types:            make(map[string]*c.Typedef),
 		uniqueEnumMember: make(map[string]bool),
+		varNames:         make(map[string]*c.VarDecl),
+		funcNames:        make(map[string]*c.FuncDecl),
 	}
 }
 
@@ -186,21 +267,15 @@ func (p *parser) parseClassSTRTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 		switch body := s.Body.(type) {
 		case *sym.Def:
 			switch body.Class {
-			case sym.ClassMOS:
-				field := c.Field{
-					Offset: s.Hdr.Value,
-					Size:   body.Size,
-					Type:   p.parseType(body.Type, nil, ""),
-					Name:   validName(body.Name),
-				}
-				t.Fields = append(t.Fields, field)
-			case sym.ClassFIELD:
+			case sym.ClassMOS, sym.ClassFIELD:
 				// TODO: Figure out how to handle FIELD. For now, parse as MOS.
 				field := c.Field{
 					Offset: s.Hdr.Value,
 					Size:   body.Size,
-					Type:   p.parseType(body.Type, nil, ""),
-					Name:   validName(body.Name),
+					Var: c.Var{
+						Type: p.parseType(body.Type, nil, ""),
+						Name: validName(body.Name),
+					},
 				}
 				t.Fields = append(t.Fields, field)
 			default:
@@ -212,8 +287,10 @@ func (p *parser) parseClassSTRTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 				field := c.Field{
 					Offset: s.Hdr.Value,
 					Size:   body.Size,
-					Type:   p.parseType(body.Type, body.Dims, body.Tag),
-					Name:   validName(body.Name),
+					Var: c.Var{
+						Type: p.parseType(body.Type, body.Dims, body.Tag),
+						Name: validName(body.Name),
+					},
 				}
 				t.Fields = append(t.Fields, field)
 			case sym.ClassEOS:
@@ -245,8 +322,10 @@ func (p *parser) parseClassUNTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 				field := c.Field{
 					Offset: s.Hdr.Value,
 					Size:   body.Size,
-					Type:   p.parseType(body.Type, nil, ""),
-					Name:   validName(body.Name),
+					Var: c.Var{
+						Type: p.parseType(body.Type, nil, ""),
+						Name: validName(body.Name),
+					},
 				}
 				t.Fields = append(t.Fields, field)
 			default:
@@ -258,8 +337,10 @@ func (p *parser) parseClassUNTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 				field := c.Field{
 					Offset: s.Hdr.Value,
 					Size:   body.Size,
-					Type:   p.parseType(body.Type, body.Dims, body.Tag),
-					Name:   validName(body.Name),
+					Var: c.Var{
+						Type: p.parseType(body.Type, body.Dims, body.Tag),
+						Name: validName(body.Name),
+					},
 				}
 				t.Fields = append(t.Fields, field)
 			case sym.ClassEOS:
@@ -273,7 +354,7 @@ func (p *parser) parseClassUNTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 }
 
 // parseClassTPDEF parses a typedef symbol.
-func (p *parser) parseClassTPDEF(t sym.Type, name string, dims []uint32, tag string) {
+func (p *parser) parseClassTPDEF(t sym.Type, dims []uint32, tag, name string) {
 	name = validName(name)
 	def := &c.Typedef{
 		Type: p.parseType(t, dims, tag),

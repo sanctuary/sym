@@ -7,9 +7,13 @@ type Class uint16
 
 // Definition classes.
 const (
-	ClassAUTO  Class = 0x0001 // AUTO
-	ClassEXT   Class = 0x0002 // EXT
-	ClassSTAT  Class = 0x0003 // STAT
+	// Storage class auto.
+	ClassAUTO Class = 0x0001 // AUTO
+	// Storage class extern.
+	ClassEXT Class = 0x0002 // EXT
+	// Storage class static.
+	ClassSTAT Class = 0x0003 // STAT
+	// Storage class register.
 	ClassREG   Class = 0x0004 // REG
 	ClassLABEL Class = 0x0006 // LABEL
 	// Member of struct.
@@ -21,7 +25,7 @@ const (
 	ClassMOU Class = 0x000B // MOU
 	// Union tag.
 	ClassUNTAG Class = 0x000C // UNTAG
-	// Type definition.
+	// Storage class typedef.
 	ClassTPDEF Class = 0x000D // TPDEF
 	// Enum tag.
 	ClassENTAG Class = 0x000F // ENTAG

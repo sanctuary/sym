@@ -4,7 +4,48 @@ import (
 	"strings"
 )
 
-// Type specifies the type of a definition.
+// Type specifies the type of a definition. A type is made up of a 4-bit basic
+// type specifyer, and a set of 2-bit type modifiers.
+//
+//    Basic type                                            xxxx
+//       Modifier                                        xx
+//          Modifier                                  xx
+//             Modifier                            xx
+//                Modifier                      xx
+//                   Modifier                xx
+//                      Modifier          xx
+//
+// Example.
+//
+//    int * f_0064() {}
+//
+// Interpretation.
+//
+//    int                                                   0100
+//       function                                        10
+//          pointer                                   01
+//                                                 00
+//                                              00
+//                                           00
+//                                        00
+//
+//                                 0x64 = 00 00 00 00 01 10 0100
+//
+// Example.
+//
+//    int (*v_0094)();
+//
+// Interpretation.
+//
+//    int                                                   0100
+//       pointer                                         01
+//          function                                  10
+//                                                 00
+//                                              00
+//                                           00
+//                                        00
+//
+//                                 0x94 = 00 00 00 00 10 01 0100
 type Type uint16
 
 // String returns a string representation of the type.
@@ -25,18 +66,18 @@ type Base uint8
 
 // Base types.
 const (
-	BaseNull  Base = 0x0 // NULL
-	BaseVoid  Base = 0x1 // VOID
-	BaseChar  Base = 0x2 // CHAR
-	BaseShort Base = 0x3 // SHORT
-	BaseInt   Base = 0x4 // INT
-	BaseLong  Base = 0x5 // LONG
-	// TODO: 0x6
-	// TODO: 0x7
+	BaseNull   Base = 0x0 // NULL
+	BaseVoid   Base = 0x1 // VOID
+	BaseChar   Base = 0x2 // CHAR
+	BaseShort  Base = 0x3 // SHORT
+	BaseInt    Base = 0x4 // INT
+	BaseLong   Base = 0x5 // LONG
+	BaseFloat  Base = 0x6 // FLOAT
+	BaseDouble Base = 0x7 // DOUBLE
 	BaseStruct Base = 0x8 // STRUCT
 	BaseUnion  Base = 0x9 // UNION
 	BaseEnum   Base = 0xA // ENUM
-	// TODO: Figure out what MOE is.
+	// TODO: Figure out what MOE is (member of enum?).
 	BaseMOE    Base = 0xB // MOE
 	BaseUChar  Base = 0xC // UCHAR
 	BaseUShort Base = 0xD // USHORT
