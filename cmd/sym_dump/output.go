@@ -36,6 +36,6 @@ func dumpDecls(p *parser) {
 	}
 	// Print function declarations.
 	for _, f := range p.funcs {
-		fmt.Printf("%s;\n\n", f)
+		fmt.Printf("%s\n\n", f)
 	}
 }

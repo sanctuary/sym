@@ -54,8 +54,22 @@ func (f *FuncDecl) String() string {
 	if f.Size > 0 {
 		fmt.Fprintf(buf, "// size: 0x%X\n", f.Size)
 	}
-	buf.WriteString(f.Var.String())
-	// TODO: Output local variables.
+	if len(f.Blocks) == 0 {
+		fmt.Fprintf(buf, "%s;", f.Var)
+		return buf.String()
+	}
+	fmt.Fprintf(buf, "%s ", f.Var)
+	for i, block := range f.Blocks {
+		indent := strings.Repeat("\t", i)
+		fmt.Fprintf(buf, "%s{\n", indent)
+		for _, local := range block.Locals {
+			fmt.Fprintf(buf, "%s\t%s;\n", indent, local)
+		}
+	}
+	for i := len(f.Blocks) - 1; i >= 0; i-- {
+		indent := strings.Repeat("\t", i)
+		fmt.Fprintf(buf, "%s}\n", indent)
+	}
 	return buf.String()
 }
 

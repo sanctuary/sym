@@ -182,10 +182,10 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 					Name: body.Name,
 				}
 				if curBlock != nil {
-					curBlock.Locals = append(curBlock.Locals, v)
+					addLocal(curBlock, v)
 				} else {
 					// Parameter already added for ClassARG.
-					//funcType.Params = append(funcType.Params, v)
+					addParam(funcType, v)
 				}
 			case sym.ClassSTAT:
 				v := c.Var{
@@ -193,9 +193,9 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 					Name: body.Name,
 				}
 				if curBlock != nil {
-					curBlock.Locals = append(curBlock.Locals, v)
+					addLocal(curBlock, v)
 				} else {
-					funcType.Params = append(funcType.Params, v)
+					addParam(funcType, v)
 				}
 			case sym.ClassREG:
 				v := c.Var{
@@ -203,10 +203,10 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 					Name: body.Name,
 				}
 				if curBlock != nil {
-					curBlock.Locals = append(curBlock.Locals, v)
+					addLocal(curBlock, v)
 				} else {
 					// Parameter already added for ClassARG.
-					//funcType.Params = append(funcType.Params, v)
+					addParam(funcType, v)
 				}
 			case sym.ClassLABEL:
 				v := c.Var{
@@ -214,9 +214,9 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 					Name: body.Name,
 				}
 				if curBlock != nil {
-					curBlock.Locals = append(curBlock.Locals, v)
+					addLocal(curBlock, v)
 				} else {
-					funcType.Params = append(funcType.Params, v)
+					addParam(funcType, v)
 				}
 			case sym.ClassARG:
 				v := c.Var{
@@ -224,9 +224,9 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 					Name: body.Name,
 				}
 				if curBlock != nil {
-					curBlock.Locals = append(curBlock.Locals, v)
+					addLocal(curBlock, v)
 				} else {
-					funcType.Params = append(funcType.Params, v)
+					addParam(funcType, v)
 				}
 			case sym.ClassREGPARM:
 				v := c.Var{
@@ -234,9 +234,9 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 					Name: body.Name,
 				}
 				if curBlock != nil {
-					curBlock.Locals = append(curBlock.Locals, v)
+					addLocal(curBlock, v)
 				} else {
-					funcType.Params = append(funcType.Params, v)
+					addParam(funcType, v)
 				}
 			default:
 				panic(fmt.Errorf("support for symbol class %q not yet implemented", body.Class))
@@ -249,10 +249,10 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 					Name: body.Name,
 				}
 				if curBlock != nil {
-					curBlock.Locals = append(curBlock.Locals, v)
+					addLocal(curBlock, v)
 				} else {
 					// Parameter already added for ClassARG.
-					//funcType.Params = append(funcType.Params, v)
+					addParam(funcType, v)
 				}
 			case sym.ClassSTAT:
 				v := c.Var{
@@ -260,9 +260,9 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 					Name: body.Name,
 				}
 				if curBlock != nil {
-					curBlock.Locals = append(curBlock.Locals, v)
+					addLocal(curBlock, v)
 				} else {
-					funcType.Params = append(funcType.Params, v)
+					addParam(funcType, v)
 				}
 			case sym.ClassREG:
 				v := c.Var{
@@ -270,10 +270,10 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 					Name: body.Name,
 				}
 				if curBlock != nil {
-					curBlock.Locals = append(curBlock.Locals, v)
+					addLocal(curBlock, v)
 				} else {
 					// Parameter already added for ClassARG.
-					//funcType.Params = append(funcType.Params, v)
+					addParam(funcType, v)
 				}
 			case sym.ClassLABEL:
 				v := c.Var{
@@ -281,9 +281,9 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 					Name: body.Name,
 				}
 				if curBlock != nil {
-					curBlock.Locals = append(curBlock.Locals, v)
+					addLocal(curBlock, v)
 				} else {
-					funcType.Params = append(funcType.Params, v)
+					addParam(funcType, v)
 				}
 			case sym.ClassARG:
 				v := c.Var{
@@ -291,9 +291,9 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 					Name: body.Name,
 				}
 				if curBlock != nil {
-					curBlock.Locals = append(curBlock.Locals, v)
+					addLocal(curBlock, v)
 				} else {
-					funcType.Params = append(funcType.Params, v)
+					addParam(funcType, v)
 				}
 			case sym.ClassREGPARM:
 				v := c.Var{
@@ -301,9 +301,9 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 					Name: body.Name,
 				}
 				if curBlock != nil {
-					curBlock.Locals = append(curBlock.Locals, v)
+					addLocal(curBlock, v)
 				} else {
-					funcType.Params = append(funcType.Params, v)
+					addParam(funcType, v)
 				}
 			default:
 				panic(fmt.Errorf("support for symbol class %q not yet implemented", body.Class))
@@ -834,4 +834,25 @@ func (b *blockStack) pop() *c.Block {
 // empty reports if the stack is empty.
 func (b *blockStack) empty() bool {
 	return len(*b) == 0
+}
+
+// addLocal adds the local variable to the block if not already present.
+func addLocal(block *c.Block, local c.Var) {
+	for _, v := range block.Locals {
+		if v.Name == local.Name {
+			return
+		}
+	}
+	block.Locals = append(block.Locals, local)
+}
+
+// addParam adds the function parameter to the function type if not already
+// present.
+func addParam(t *c.FuncType, param c.Var) {
+	for _, p := range t.Params {
+		if p.Name == param.Name {
+			return
+		}
+	}
+	t.Params = append(t.Params, param)
 }
