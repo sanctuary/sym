@@ -3,6 +3,7 @@ package sym_test
 import (
 	"crypto/sha1"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/sanctuary/sym"
@@ -28,6 +29,10 @@ func TestParseFile(t *testing.T) {
 		},
 	}
 	for _, g := range golden {
+		if !exists(g.path) {
+			t.Skip()
+			continue
+		}
 		f, err := sym.ParseFile(g.path)
 		if err != nil {
 			t.Errorf("unable to parse %q; %v", g.path, err)
@@ -38,4 +43,16 @@ func TestParseFile(t *testing.T) {
 			t.Errorf("%q: SHA1 hash mismatch; expected %v, got %v", g.path, g.want, got)
 		}
 	}
+}
+
+// exists reports whether the given file or directory exists.
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	panic(fmt.Errorf("unable to stat path %q; %v", path, err))
 }
