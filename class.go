@@ -18,6 +18,7 @@ const (
 	ClassLABEL Class = 0x0006 // LABEL
 	// Member of struct.
 	ClassMOS Class = 0x0008 // MOS
+	// Function parameter passed on stack.
 	ClassARG Class = 0x0009 // ARG
 	// Struct tag.
 	ClassSTRTAG Class = 0x000A // STRTAG
@@ -30,7 +31,8 @@ const (
 	// Enum tag.
 	ClassENTAG Class = 0x000F // ENTAG
 	// Member of enum.
-	ClassMOE     Class = 0x0010 // MOE
+	ClassMOE Class = 0x0010 // MOE
+	// Function parameter passed in register.
 	ClassREGPARM Class = 0x0011 // REGPARM
 	ClassFIELD   Class = 0x0012 // FIELD
 	// End of symbol.

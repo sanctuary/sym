@@ -38,12 +38,15 @@ func main() {
 		switch {
 		case outputC:
 			// Output C types and declarations.
-			p := parse(f)
+			p := newParser()
+			p.parseTypes(f.Syms)
+			p.parseDecls(f.Syms)
 			dumpTypes(p)
 			dumpDecls(p)
 		case outputTypes:
 			// Output C types.
-			p := parse(f)
+			p := newParser()
+			p.parseTypes(f.Syms)
 			dumpTypes(p)
 		default:
 			// Output in Psy-Q DUMPSYM.EXE format.

@@ -29,23 +29,303 @@ func parse(f *sym.File) *parser {
 
 // parseDecls parses the SYM symbols into the equivalent C declarations.
 func (p *parser) parseDecls(syms []*sym.Symbol) {
+	var curLine Line
+	var curOverlay *Overlay
 	for i := 0; i < len(syms); i++ {
 		s := syms[i]
 		switch body := s.Body.(type) {
+		case *sym.Name1:
+			symbol := &Symbol{
+				Addr: s.Hdr.Value,
+				Name: body.Name,
+			}
+			p.symbols = append(p.symbols, symbol)
+		case *sym.Name2:
+			symbol := &Symbol{
+				Addr: s.Hdr.Value,
+				Name: body.Name,
+			}
+			p.symbols = append(p.symbols, symbol)
+		case *sym.IncSLD:
+			curLine.Line++
+			line := &Line{
+				Addr: s.Hdr.Value,
+				Path: curLine.Path,
+				Line: curLine.Line,
+			}
+			p.lines = append(p.lines, line)
+		case *sym.IncSLDByte:
+			curLine.Line += uint32(body.Inc)
+			line := &Line{
+				Addr: s.Hdr.Value,
+				Path: curLine.Path,
+				Line: curLine.Line,
+			}
+			p.lines = append(p.lines, line)
+		case *sym.IncSLDWord:
+			curLine.Line += uint32(body.Inc)
+			line := &Line{
+				Addr: s.Hdr.Value,
+				Path: curLine.Path,
+				Line: curLine.Line,
+			}
+			p.lines = append(p.lines, line)
+		case *sym.SetSLD:
+			// TODO: reset curLine.Path?
+			curLine.Line = body.Line
+			line := &Line{
+				Addr: s.Hdr.Value,
+				Path: curLine.Path,
+				Line: curLine.Line,
+			}
+			p.lines = append(p.lines, line)
+		case *sym.SetSLD2:
+			curLine = Line{
+				Path: body.Path,
+				Line: body.Line,
+			}
+			line := &Line{
+				Addr: s.Hdr.Value,
+				Path: curLine.Path,
+				Line: curLine.Line,
+			}
+			p.lines = append(p.lines, line)
+		case *sym.EndSLD:
+			curLine = Line{}
+		case *sym.FuncStart:
+			n := p.parseFunc(s.Hdr.Value, body, syms[i+1:])
+			i += n
 		case *sym.Def:
 			switch body.Class {
 			case sym.ClassEXT, sym.ClassSTAT:
 				// TODO: figure out how EXT and STAT differ.
 				p.parseClassEXT(s.Hdr.Value, body.Size, body.Type, nil, "", body.Name)
+			case sym.ClassMOS, sym.ClassSTRTAG, sym.ClassMOU, sym.ClassUNTAG, sym.ClassTPDEF, sym.ClassENTAG, sym.ClassMOE, sym.ClassFIELD:
+				// nothing to do.
+			default:
+				panic(fmt.Sprintf("support for symbol class %q not yet implemented", body.Class))
 			}
 		case *sym.Def2:
 			switch body.Class {
 			case sym.ClassEXT, sym.ClassSTAT:
 				// TODO: figure out how EXT and STAT differ.
 				p.parseClassEXT(s.Hdr.Value, body.Size, body.Type, body.Dims, body.Tag, body.Name)
+			case sym.ClassMOS, sym.ClassMOU, sym.ClassTPDEF, sym.ClassMOE, sym.ClassFIELD, sym.ClassEOS:
+				// nothing to do.
+			default:
+				panic(fmt.Sprintf("support for symbol class %q not yet implemented", body.Class))
+			}
+		case *sym.Overlay:
+			p.parseOverlay(s.Hdr.Value, body)
+		case *sym.SetOverlay:
+			overlay, ok := p.overlayIDs[s.Hdr.Value]
+			if !ok {
+				panic(fmt.Errorf("unable to locate overlay with ID %x", s.Hdr.Value))
+			}
+			curOverlay = overlay
+			_ = curOverlay // TODO: Remove.
+		default:
+			panic(fmt.Sprintf("support for symbol type %T not yet implemented", body))
+		}
+	}
+}
+
+// parseFunc parses a function sequence of symbols.
+func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol) (n int) {
+	name := validName(body.Name)
+	f, ok := p.funcNames[name]
+	if !ok {
+		panic(fmt.Errorf("unable to locate function %q", name))
+	}
+	funcType, ok := f.Type.(*c.FuncType)
+	if !ok {
+		panic(fmt.Errorf("invalid function type; expected *c.FuncType, got %T", f.Type))
+	}
+	if f.LineStart != 0 {
+		// Ignore function duplicate.
+		for n = 0; n < len(syms); n++ {
+			s := syms[n]
+			switch s.Body.(type) {
+			case *sym.FuncEnd:
+				return n + 1
 			}
 		}
 	}
+	f.LineStart = body.Line
+	var blocks blockStack
+	var curBlock *c.Block
+	for n = 0; n < len(syms); n++ {
+		s := syms[n]
+		switch body := s.Body.(type) {
+		case *sym.FuncEnd:
+			f.LineEnd = body.Line
+			return n + 1
+		case *sym.BlockStart:
+			if curBlock != nil {
+				blocks.push(curBlock)
+			}
+			block := &c.Block{
+				LineStart: body.Line,
+			}
+			f.Blocks = append(f.Blocks, block)
+			curBlock = block
+		case *sym.BlockEnd:
+			curBlock.LineEnd = body.Line
+			if !blocks.empty() {
+				curBlock = blocks.pop()
+			}
+		case *sym.Def:
+			switch body.Class {
+			case sym.ClassAUTO:
+				v := c.Var{
+					Type: p.parseType(body.Type, nil, ""),
+					Name: body.Name,
+				}
+				if curBlock != nil {
+					curBlock.Locals = append(curBlock.Locals, v)
+				} else {
+					// Parameter already added for ClassARG.
+					//funcType.Params = append(funcType.Params, v)
+				}
+			case sym.ClassSTAT:
+				v := c.Var{
+					Type: p.parseType(body.Type, nil, ""),
+					Name: body.Name,
+				}
+				if curBlock != nil {
+					curBlock.Locals = append(curBlock.Locals, v)
+				} else {
+					funcType.Params = append(funcType.Params, v)
+				}
+			case sym.ClassREG:
+				v := c.Var{
+					Type: p.parseType(body.Type, nil, ""),
+					Name: body.Name,
+				}
+				if curBlock != nil {
+					curBlock.Locals = append(curBlock.Locals, v)
+				} else {
+					// Parameter already added for ClassARG.
+					//funcType.Params = append(funcType.Params, v)
+				}
+			case sym.ClassLABEL:
+				v := c.Var{
+					Type: p.parseType(body.Type, nil, ""),
+					Name: body.Name,
+				}
+				if curBlock != nil {
+					curBlock.Locals = append(curBlock.Locals, v)
+				} else {
+					funcType.Params = append(funcType.Params, v)
+				}
+			case sym.ClassARG:
+				v := c.Var{
+					Type: p.parseType(body.Type, nil, ""),
+					Name: body.Name,
+				}
+				if curBlock != nil {
+					curBlock.Locals = append(curBlock.Locals, v)
+				} else {
+					funcType.Params = append(funcType.Params, v)
+				}
+			case sym.ClassREGPARM:
+				v := c.Var{
+					Type: p.parseType(body.Type, nil, ""),
+					Name: body.Name,
+				}
+				if curBlock != nil {
+					curBlock.Locals = append(curBlock.Locals, v)
+				} else {
+					funcType.Params = append(funcType.Params, v)
+				}
+			default:
+				panic(fmt.Errorf("support for symbol class %q not yet implemented", body.Class))
+			}
+		case *sym.Def2:
+			switch body.Class {
+			case sym.ClassAUTO:
+				v := c.Var{
+					Type: p.parseType(body.Type, body.Dims, body.Tag),
+					Name: body.Name,
+				}
+				if curBlock != nil {
+					curBlock.Locals = append(curBlock.Locals, v)
+				} else {
+					// Parameter already added for ClassARG.
+					//funcType.Params = append(funcType.Params, v)
+				}
+			case sym.ClassSTAT:
+				v := c.Var{
+					Type: p.parseType(body.Type, body.Dims, body.Tag),
+					Name: body.Name,
+				}
+				if curBlock != nil {
+					curBlock.Locals = append(curBlock.Locals, v)
+				} else {
+					funcType.Params = append(funcType.Params, v)
+				}
+			case sym.ClassREG:
+				v := c.Var{
+					Type: p.parseType(body.Type, body.Dims, body.Tag),
+					Name: body.Name,
+				}
+				if curBlock != nil {
+					curBlock.Locals = append(curBlock.Locals, v)
+				} else {
+					// Parameter already added for ClassARG.
+					//funcType.Params = append(funcType.Params, v)
+				}
+			case sym.ClassLABEL:
+				v := c.Var{
+					Type: p.parseType(body.Type, body.Dims, body.Tag),
+					Name: body.Name,
+				}
+				if curBlock != nil {
+					curBlock.Locals = append(curBlock.Locals, v)
+				} else {
+					funcType.Params = append(funcType.Params, v)
+				}
+			case sym.ClassARG:
+				v := c.Var{
+					Type: p.parseType(body.Type, body.Dims, body.Tag),
+					Name: body.Name,
+				}
+				if curBlock != nil {
+					curBlock.Locals = append(curBlock.Locals, v)
+				} else {
+					funcType.Params = append(funcType.Params, v)
+				}
+			case sym.ClassREGPARM:
+				v := c.Var{
+					Type: p.parseType(body.Type, body.Dims, body.Tag),
+					Name: body.Name,
+				}
+				if curBlock != nil {
+					curBlock.Locals = append(curBlock.Locals, v)
+				} else {
+					funcType.Params = append(funcType.Params, v)
+				}
+			default:
+				panic(fmt.Errorf("support for symbol class %q not yet implemented", body.Class))
+			}
+		default:
+			panic(fmt.Errorf("support for symbol type %T not yet implemented", body))
+		}
+	}
+	panic("unreachable")
+}
+
+// parseOverlay parses an overlay symbol.
+func (p *parser) parseOverlay(addr uint32, body *sym.Overlay) {
+	overlay := &Overlay{
+		Addr:      addr,
+		ID:        body.ID,
+		Length:    body.Length,
+		varNames:  make(map[string]*c.VarDecl),
+		funcNames: make(map[string]*c.FuncDecl),
+	}
+	p.overlays = append(p.overlays, overlay)
+	p.overlayIDs[overlay.ID] = overlay
 }
 
 // parseClassEXT parses an EXT symbol.
@@ -59,8 +339,8 @@ func (p *parser) parseClassEXT(addr, size uint32, t sym.Type, dims []uint32, tag
 	cType := p.parseType(t, dims, tag)
 	if funcType, ok := cType.(*c.FuncType); ok {
 		f := &c.FuncDecl{
-			Address: addr,
-			Size:    size,
+			Addr: addr,
+			Size: size,
 			Var: c.Var{
 				Type: funcType,
 				Name: name,
@@ -70,8 +350,8 @@ func (p *parser) parseClassEXT(addr, size uint32, t sym.Type, dims []uint32, tag
 		p.funcNames[name] = f
 	} else {
 		v := &c.VarDecl{
-			Address: addr,
-			Size:    size,
+			Addr: addr,
+			Size: size,
 			Var: c.Var{
 				Type: cType,
 				Name: name,
@@ -210,6 +490,22 @@ type parser struct {
 	uniqueEnumMember map[string]bool
 
 	// Declarations.
+	*Overlay // default binary
+
+	// Overlays.
+	overlays []*Overlay
+	// overlayIDs maps from overlay ID to overlay.
+	overlayIDs map[uint32]*Overlay
+}
+
+// An Overlay is an overlay appended to the end of the executable.
+type Overlay struct {
+	// Base address at which the overlay is loaded.
+	Addr uint32
+	// Overlay ID.
+	ID uint32
+	// Overlay length in bytes.
+	Length uint32
 
 	// Variable delcarations.
 	vars []*c.VarDecl
@@ -219,6 +515,29 @@ type parser struct {
 	varNames map[string]*c.VarDecl
 	// funcNames maps from function name to function declaration.
 	funcNames map[string]*c.FuncDecl
+
+	// Symbols.
+	symbols []*Symbol
+	// Source file line numbers.
+	lines []*Line
+}
+
+// A Symbol associates a symbol name with an address.
+type Symbol struct {
+	// Symbol address.
+	Addr uint32
+	// Symbol name.
+	Name string
+}
+
+// A Line associates a line number in a source file with an address.
+type Line struct {
+	// Address.
+	Addr uint32
+	// Source file name.
+	Path string
+	// Line number.
+	Line uint32
 }
 
 // newParser returns a new parser.
@@ -229,8 +548,11 @@ func newParser() *parser {
 		enums:            make(map[string]*c.EnumType),
 		types:            make(map[string]*c.Typedef),
 		uniqueEnumMember: make(map[string]bool),
-		varNames:         make(map[string]*c.VarDecl),
-		funcNames:        make(map[string]*c.FuncDecl),
+		Overlay: &Overlay{
+			varNames:  make(map[string]*c.VarDecl),
+			funcNames: make(map[string]*c.FuncDecl),
+		},
+		overlayIDs: make(map[uint32]*Overlay),
 	}
 }
 
@@ -489,4 +811,27 @@ func validName(name string) string {
 		}
 	}
 	return strings.Map(f, name)
+}
+
+// blockStack is a stack of blocks.
+type blockStack []*c.Block
+
+// push pushes the block onto the stack.
+func (b *blockStack) push(block *c.Block) {
+	*b = append(*b, block)
+}
+
+// pop pops the block from the stack.
+func (b *blockStack) pop() *c.Block {
+	if b.empty() {
+		panic("invalid pop call; empty stack")
+	}
+	block := (*b)[len(*b)-1]
+	*b = (*b)[:len(*b)-1]
+	return block
+}
+
+// empty reports if the stack is empty.
+func (b *blockStack) empty() bool {
+	return len(*b) == 0
 }
