@@ -3,21 +3,14 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
-	"github.com/mewkiz/pkg/term"
 	"github.com/sanctuary/sym"
 	"github.com/sanctuary/sym/internal/c"
 )
 
 // Prefix added to duplicate symbols.
 const duplicatePrefix = "_duplicate_"
-
-var (
-	// TODO: remove debug output once C output is mature.
-	dbg = log.New(os.Stderr, term.Cyan("dbg:")+" ", log.Lshortfile)
-)
 
 // parse parses the SYM file into equivalent C declarations.
 func parse(f *sym.File) *parser {
@@ -385,19 +378,19 @@ func (p *parser) parseTypes(syms []*sym.Symbol) {
 				n := p.parseClassENTAG(body, syms[i+1:])
 				i += n
 			default:
-				//dbg.Printf("support for class %q not yet implemented", body.Class)
+				//log.Printf("support for class %q not yet implemented", body.Class)
 			}
 		case *sym.Def2:
 			switch body.Class {
 			case sym.ClassTPDEF:
 				p.parseClassTPDEF(body.Type, body.Dims, body.Tag, body.Name)
 			default:
-				//dbg.Printf("support for class %q not yet implemented", body.Class)
+				//log.Printf("support for class %q not yet implemented", body.Class)
 			}
 		case *sym.Overlay:
 		// nothing to do.
 		default:
-			//dbg.Printf("support for symbol body %T not yet implemented", body)
+			//log.Printf("support for symbol body %T not yet implemented", body)
 		}
 	}
 }
