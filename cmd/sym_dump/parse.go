@@ -168,59 +168,7 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 			}
 		case *sym.Def:
 			switch body.Class {
-			case sym.ClassAUTO:
-				v := c.Var{
-					Type: p.parseType(body.Type, nil, ""),
-					Name: body.Name,
-				}
-				if curBlock != nil {
-					addLocal(curBlock, v)
-				} else {
-					// Parameter already added for ClassARG.
-					addParam(funcType, v)
-				}
-			case sym.ClassSTAT:
-				v := c.Var{
-					Type: p.parseType(body.Type, nil, ""),
-					Name: body.Name,
-				}
-				if curBlock != nil {
-					addLocal(curBlock, v)
-				} else {
-					addParam(funcType, v)
-				}
-			case sym.ClassREG:
-				v := c.Var{
-					Type: p.parseType(body.Type, nil, ""),
-					Name: body.Name,
-				}
-				if curBlock != nil {
-					addLocal(curBlock, v)
-				} else {
-					// Parameter already added for ClassARG.
-					addParam(funcType, v)
-				}
-			case sym.ClassLABEL:
-				v := c.Var{
-					Type: p.parseType(body.Type, nil, ""),
-					Name: body.Name,
-				}
-				if curBlock != nil {
-					addLocal(curBlock, v)
-				} else {
-					addParam(funcType, v)
-				}
-			case sym.ClassARG:
-				v := c.Var{
-					Type: p.parseType(body.Type, nil, ""),
-					Name: body.Name,
-				}
-				if curBlock != nil {
-					addLocal(curBlock, v)
-				} else {
-					addParam(funcType, v)
-				}
-			case sym.ClassREGPARM:
+			case sym.ClassAUTO, sym.ClassSTAT, sym.ClassREG, sym.ClassLABEL, sym.ClassARG, sym.ClassREGPARM:
 				v := c.Var{
 					Type: p.parseType(body.Type, nil, ""),
 					Name: body.Name,
@@ -235,59 +183,7 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 			}
 		case *sym.Def2:
 			switch body.Class {
-			case sym.ClassAUTO:
-				v := c.Var{
-					Type: p.parseType(body.Type, body.Dims, body.Tag),
-					Name: body.Name,
-				}
-				if curBlock != nil {
-					addLocal(curBlock, v)
-				} else {
-					// Parameter already added for ClassARG.
-					addParam(funcType, v)
-				}
-			case sym.ClassSTAT:
-				v := c.Var{
-					Type: p.parseType(body.Type, body.Dims, body.Tag),
-					Name: body.Name,
-				}
-				if curBlock != nil {
-					addLocal(curBlock, v)
-				} else {
-					addParam(funcType, v)
-				}
-			case sym.ClassREG:
-				v := c.Var{
-					Type: p.parseType(body.Type, body.Dims, body.Tag),
-					Name: body.Name,
-				}
-				if curBlock != nil {
-					addLocal(curBlock, v)
-				} else {
-					// Parameter already added for ClassARG.
-					addParam(funcType, v)
-				}
-			case sym.ClassLABEL:
-				v := c.Var{
-					Type: p.parseType(body.Type, body.Dims, body.Tag),
-					Name: body.Name,
-				}
-				if curBlock != nil {
-					addLocal(curBlock, v)
-				} else {
-					addParam(funcType, v)
-				}
-			case sym.ClassARG:
-				v := c.Var{
-					Type: p.parseType(body.Type, body.Dims, body.Tag),
-					Name: body.Name,
-				}
-				if curBlock != nil {
-					addLocal(curBlock, v)
-				} else {
-					addParam(funcType, v)
-				}
-			case sym.ClassREGPARM:
+			case sym.ClassAUTO, sym.ClassSTAT, sym.ClassREG, sym.ClassLABEL, sym.ClassARG, sym.ClassREGPARM:
 				v := c.Var{
 					Type: p.parseType(body.Type, body.Dims, body.Tag),
 					Name: body.Name,
