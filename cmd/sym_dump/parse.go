@@ -12,14 +12,6 @@ import (
 // Prefix added to duplicate symbols.
 const duplicatePrefix = "_duplicate_"
 
-// parse parses the SYM file into equivalent C declarations.
-func parse(f *sym.File) *parser {
-	p := newParser()
-	p.parseTypes(f.Syms)
-	p.parseDecls(f.Syms)
-	return p
-}
-
 // parseDecls parses the SYM symbols into the equivalent C declarations.
 func (p *parser) parseDecls(syms []*sym.Symbol) {
 	var curLine Line
@@ -129,6 +121,13 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 	f, ok := p.funcNames[name]
 	if !ok {
 		panic(fmt.Errorf("unable to locate function %q", name))
+	}
+	if f.Addr != addr {
+		name = uniqueName(name, addr)
+		f, ok = p.funcNames[name]
+		if !ok {
+			panic(fmt.Errorf("unable to locate function %q", name))
+		}
 	}
 	funcType, ok := f.Type.(*c.FuncType)
 	if !ok {
@@ -324,10 +323,11 @@ func (p *parser) parseOverlay(addr uint32, body *sym.Overlay) {
 // parseClassEXT parses an EXT symbol.
 func (p *parser) parseClassEXT(addr, size uint32, t sym.Type, dims []uint32, tag, name string) {
 	name = validName(name)
+	// Duplicate name.
 	if _, ok := p.varNames[name]; ok {
-		name = duplicatePrefix + name
+		name = uniqueName(name, addr)
 	} else if _, ok := p.funcNames[name]; ok {
-		name = duplicatePrefix + name
+		name = uniqueName(name, addr)
 	}
 	cType := p.parseType(t, dims, tag)
 	if funcType, ok := cType.(*c.FuncType); ok {
@@ -848,4 +848,9 @@ func addParam(t *c.FuncType, param c.Var) {
 		}
 	}
 	t.Params = append(t.Params, param)
+}
+
+// uniqueName returns a unique name based on the given name and address.
+func uniqueName(name string, addr uint32) string {
+	return fmt.Sprintf("%s_addr_%08X", name, addr)
 }
