@@ -14,7 +14,8 @@ const (
 	// Storage class static.
 	ClassSTAT Class = 0x0003 // STAT
 	// Storage class register.
-	ClassREG   Class = 0x0004 // REG
+	ClassREG Class = 0x0004 // REG
+	// TODO: Figure out when LABEL is used.
 	ClassLABEL Class = 0x0006 // LABEL
 	// Member of struct.
 	ClassMOS Class = 0x0008 // MOS
@@ -34,7 +35,8 @@ const (
 	ClassMOE Class = 0x0010 // MOE
 	// Function parameter passed in register.
 	ClassREGPARM Class = 0x0011 // REGPARM
-	ClassFIELD   Class = 0x0012 // FIELD
+	// TODO: Figure out when FIELD is used.
+	ClassFIELD Class = 0x0012 // FIELD
 	// End of symbol.
 	ClassEOS Class = 0x0066 // EOS
 )

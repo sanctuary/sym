@@ -50,7 +50,7 @@ func main() {
 			dumpTypes(p)
 		default:
 			// Output in Psy-Q DUMPSYM.EXE format.
-			fmt.Println(f)
+			fmt.Print(f)
 		}
 	}
 }

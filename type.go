@@ -1,12 +1,13 @@
 package sym
 
 import (
+	"fmt"
 	"strings"
 )
 
 // Type specifies the type of a definition.
 //
-// A type is made up of a 4-bit basic type specifyer, and a set of 2-bit type
+// A type is made up of a 4-bit basic type specifier, and a set of 2-bit type
 // modifiers.
 //
 //    Basic type                                            xxxx
@@ -79,7 +80,7 @@ const (
 	BaseStruct Base = 0x8 // STRUCT
 	BaseUnion  Base = 0x9 // UNION
 	BaseEnum   Base = 0xA // ENUM
-	// TODO: Figure out what MOE is (member of enum?).
+	// Member of enum.
 	BaseMOE    Base = 0xB // MOE
 	BaseUChar  Base = 0xC // UCHAR
 	BaseUShort Base = 0xD // USHORT
@@ -115,8 +116,8 @@ func (t Type) Mods() []Mod {
 		if modMask == 0 {
 			continue
 		}
-		if !(modMask >= 0x1 && modMask <= 0x3) {
-			panic("unreachable")
+		if !(ModPointer <= modMask && modMask <= ModArray) {
+			panic(fmt.Sprintf("invalid modifier mask; expected >= 0x1 and <= 0x3, got 0x%X", modMask))
 		}
 		mods = append(mods, modMask)
 	}

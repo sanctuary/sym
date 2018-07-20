@@ -26,7 +26,7 @@ type File struct {
 func (f *File) String() string {
 	buf := &strings.Builder{}
 	offset := 0
-	buf.WriteString(f.Hdr.String())
+	fmt.Fprintln(buf, f.Hdr)
 	offset += binary.Size(*f.Hdr)
 	var line int
 	for _, sym := range f.Syms {
@@ -56,6 +56,7 @@ func (f *File) String() string {
 			line = int(body.Line)
 		}
 		if len(bodyStr) == 0 {
+			// Symbol without body.
 			fmt.Fprintf(buf, "%06x: %s\n", offset, sym.Hdr)
 
 		} else {
@@ -71,7 +72,7 @@ type FileHeader struct {
 	// File signature; MND.
 	Signature [3]byte `struc:"[3]byte"`
 	// File format version.
-	Version uint8 `struc:"uint8,little"`
+	Version uint8 `struc:"uint8"`
 	// Target unit.
 	TargetUnit uint32 `struc:"uint32,little"`
 }
@@ -80,8 +81,7 @@ type FileHeader struct {
 func (hdr *FileHeader) String() string {
 	const format = `
 Header : %s version %d
-Target unit %d
-`
+Target unit %d`
 	return fmt.Sprintf(format, hdr.Signature, hdr.Version, hdr.TargetUnit)
 }
 
@@ -128,7 +128,7 @@ func Parse(r io.Reader) (*File, error) {
 // parseFileHeader parses and returns a PS1 symbol file header.
 func parseFileHeader(r io.Reader) (*FileHeader, error) {
 	hdr := &FileHeader{}
-	if err := struc.Unpack(r, &hdr); err != nil {
+	if err := struc.Unpack(r, hdr); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	// Verify Smacker signature.
@@ -136,7 +136,7 @@ func parseFileHeader(r io.Reader) (*FileHeader, error) {
 	case "MND":
 		// valid signature.
 	default:
-		return nil, errors.Errorf(`invalid SYM signature; expected "MND", got %q`, hdr.Signature)
+		return nil, errors.Errorf(`invalid SYM signature; expected "MND", got %q`, string(hdr.Signature[:]))
 	}
 	return hdr, nil
 }

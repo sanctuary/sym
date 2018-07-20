@@ -27,8 +27,7 @@ func (sym *Symbol) String() string {
 // Size returns the size of the symbol in bytes.
 func (sym *Symbol) Size() int {
 	hdrSize := binary.Size(*sym.Hdr)
-	bodySize := sym.Body.BodySize()
-	return hdrSize + bodySize
+	return hdrSize + sym.Body.BodySize()
 }
 
 // A SymbolHeader is a PS1 symbol header.
@@ -36,7 +35,7 @@ type SymbolHeader struct {
 	// Address or value of symbol.
 	Value uint32 `struc:"uint32,little"`
 	// Symbol kind; specifies type of symbol body.
-	Kind Kind `struc:"uint8,little"`
+	Kind Kind `struc:"uint8"`
 }
 
 // String returns the string representation of the symbol header.
@@ -73,7 +72,7 @@ func parseSymbol(r io.Reader) (*Symbol, error) {
 // parseSymbolHeader parses and returns a PS1 symbol header.
 func parseSymbolHeader(r io.Reader) (*SymbolHeader, error) {
 	hdr := &SymbolHeader{}
-	if err := struc.Unpack(r, &hdr); err != nil {
+	if err := struc.Unpack(r, hdr); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return hdr, nil
@@ -135,7 +134,7 @@ func parseSymbolBody(r io.Reader, kind Kind) (SymbolBody, error) {
 // Value of the symbol header specifies the associated address.
 type Name1 struct {
 	// Name length.
-	NameLen uint8 `struc:"uint8,little,sizeof=Name"`
+	NameLen uint8 `struc:"uint8,sizeof=Name"`
 	// Symbol name,
 	Name string
 }
@@ -158,7 +157,7 @@ func (body *Name1) BodySize() int {
 // Value of the symbol header specifies the associated address.
 type Name2 struct {
 	// Name length.
-	NameLen uint8 `struc:"uint8,little,sizeof=Name"`
+	NameLen uint8 `struc:"uint8,sizeof=Name"`
 	// Symbol name,
 	Name string
 }
@@ -199,7 +198,7 @@ func (body *IncSLD) BodySize() int {
 //
 // Value of the symbol header specifies the associated address.
 type IncSLDByte struct {
-	Inc uint8 `struc:"uint8,little"`
+	Inc uint8 `struc:"uint8"`
 }
 
 // String returns the string representation of the line number increment symbol.
@@ -263,7 +262,7 @@ type SetSLD2 struct {
 	// Line number.
 	Line uint32 `struc:"uint32,little"`
 	// Path length.
-	PathLen uint8 `struc:"uint8,little,sizeof=Path"`
+	PathLen uint8 `struc:"uint8,sizeof=Path"`
 	// Source file,
 	Path string
 }
@@ -317,11 +316,11 @@ type FuncStart struct {
 	// Line number.
 	Line uint32 `struc:"uint32,little"`
 	// Path length.
-	PathLen uint8 `struc:"uint8,little,sizeof=Path"`
+	PathLen uint8 `struc:"uint8,sizeof=Path"`
 	// Source file.
 	Path string
 	// Name length.
-	NameLen uint8 `struc:"uint8,little,sizeof=Name"`
+	NameLen uint8 `struc:"uint8,sizeof=Name"`
 	// Symbol name.
 	Name string
 }
@@ -430,7 +429,7 @@ type Def struct {
 	// Definition size.
 	Size uint32 `struc:"uint32,little"`
 	// Name length.
-	NameLen uint8 `struc:"uint8,little,sizeof=Name"`
+	NameLen uint8 `struc:"uint8,sizeof=Name"`
 	// Definition name,
 	Name string
 }
@@ -438,7 +437,7 @@ type Def struct {
 // String returns the string representation of the definition symbol.
 func (body *Def) String() string {
 	// $00000000 94 Def class TPDEF type UCHAR size 0 name u_char
-	return fmt.Sprintf("class %v type %v size %v name %v", body.Class, body.Type, body.Size, body.Name)
+	return fmt.Sprintf("Def class %v type %v size %v name %v", body.Class, body.Type, body.Size, body.Name)
 }
 
 // BodySize returns the size of the symbol body in bytes.
@@ -464,11 +463,11 @@ type Def2 struct {
 	// Dimensions.
 	Dims []uint32 `struc:"[]uint32,little"`
 	// Tag length.
-	TagLen uint8 `struc:"uint8,little,sizeof=Tag"`
+	TagLen uint8 `struc:"uint8,sizeof=Tag"`
 	// Definition tag,
 	Tag string
 	// Name length.
-	NameLen uint8 `struc:"uint8,little,sizeof=Name"`
+	NameLen uint8 `struc:"uint8,sizeof=Name"`
 	// Definition name,
 	Name string
 }
@@ -484,7 +483,7 @@ func (body *Def2) String() string {
 	if body.DimsLen == 0 {
 		dims = "0"
 	}
-	return fmt.Sprintf("class %v type %v size %v dims %s tag %v name %v", body.Class, body.Type, body.Size, dims, body.Tag, body.Name)
+	return fmt.Sprintf("Def2 class %v type %v size %v dims %s tag %v name %v", body.Class, body.Type, body.Size, dims, body.Tag, body.Name)
 }
 
 // BodySize returns the size of the symbol body in bytes.
@@ -494,7 +493,7 @@ func (body *Def2) BodySize() int {
 
 // --- [ 0x98 ] ----------------------------------------------------------------
 
-// An Overlay symbol specifies the length and id of an file overlay (e.g. a
+// An Overlay symbol specifies the length and id of a file overlay (e.g. a
 // shared library).
 //
 // Value of the symbol header specifies the base address at which the overlay is
@@ -519,9 +518,9 @@ func (body *Overlay) BodySize() int {
 
 // --- [ 0x9A ] ----------------------------------------------------------------
 
-// A SetOverlay specifies an overlay.
+// A SetOverlay specifies the active overlay.
 //
-// Value of the symbol header specifies TODO.
+// Value of the symbol header specifies the active overlay ID.
 type SetOverlay struct {
 }
 
