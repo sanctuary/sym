@@ -15,7 +15,6 @@ const duplicatePrefix = "_duplicate_"
 // parseDecls parses the SYM symbols into the equivalent C declarations.
 func (p *parser) parseDecls(syms []*sym.Symbol) {
 	var curLine Line
-	var curOverlay *Overlay
 	for i := 0; i < len(syms); i++ {
 		s := syms[i]
 		switch body := s.Body.(type) {
@@ -24,13 +23,13 @@ func (p *parser) parseDecls(syms []*sym.Symbol) {
 				Addr: s.Hdr.Value,
 				Name: body.Name,
 			}
-			p.symbols = append(p.symbols, symbol)
+			p.curOverlay.symbols = append(p.curOverlay.symbols, symbol)
 		case *sym.Name2:
 			symbol := &Symbol{
 				Addr: s.Hdr.Value,
 				Name: body.Name,
 			}
-			p.symbols = append(p.symbols, symbol)
+			p.curOverlay.symbols = append(p.curOverlay.symbols, symbol)
 		case *sym.IncSLD:
 			curLine.Line++
 			line := &Line{
@@ -38,7 +37,7 @@ func (p *parser) parseDecls(syms []*sym.Symbol) {
 				Path: curLine.Path,
 				Line: curLine.Line,
 			}
-			p.lines = append(p.lines, line)
+			p.curOverlay.lines = append(p.curOverlay.lines, line)
 		case *sym.IncSLDByte:
 			curLine.Line += uint32(body.Inc)
 			line := &Line{
@@ -46,7 +45,7 @@ func (p *parser) parseDecls(syms []*sym.Symbol) {
 				Path: curLine.Path,
 				Line: curLine.Line,
 			}
-			p.lines = append(p.lines, line)
+			p.curOverlay.lines = append(p.curOverlay.lines, line)
 		case *sym.IncSLDWord:
 			curLine.Line += uint32(body.Inc)
 			line := &Line{
@@ -54,7 +53,7 @@ func (p *parser) parseDecls(syms []*sym.Symbol) {
 				Path: curLine.Path,
 				Line: curLine.Line,
 			}
-			p.lines = append(p.lines, line)
+			p.curOverlay.lines = append(p.curOverlay.lines, line)
 		case *sym.SetSLD:
 			// TODO: reset curLine.Path?
 			curLine.Line = body.Line
@@ -63,7 +62,7 @@ func (p *parser) parseDecls(syms []*sym.Symbol) {
 				Path: curLine.Path,
 				Line: curLine.Line,
 			}
-			p.lines = append(p.lines, line)
+			p.curOverlay.lines = append(p.curOverlay.lines, line)
 		case *sym.SetSLD2:
 			curLine = Line{
 				Path: body.Path,
@@ -74,7 +73,7 @@ func (p *parser) parseDecls(syms []*sym.Symbol) {
 				Path: curLine.Path,
 				Line: curLine.Line,
 			}
-			p.lines = append(p.lines, line)
+			p.curOverlay.lines = append(p.curOverlay.lines, line)
 		case *sym.EndSLD:
 			curLine = Line{}
 		case *sym.FuncStart:
@@ -107,8 +106,7 @@ func (p *parser) parseDecls(syms []*sym.Symbol) {
 			if !ok {
 				panic(fmt.Errorf("unable to locate overlay with ID %x", s.Hdr.Value))
 			}
-			curOverlay = overlay
-			_ = curOverlay // TODO: Remove.
+			p.curOverlay = overlay
 		default:
 			panic(fmt.Sprintf("support for symbol type %T not yet implemented", body))
 		}
@@ -118,13 +116,13 @@ func (p *parser) parseDecls(syms []*sym.Symbol) {
 // parseFunc parses a function sequence of symbols.
 func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol) (n int) {
 	name := validName(body.Name)
-	f, ok := p.funcNames[name]
+	f, ok := p.curOverlay.funcNames[name]
 	if !ok {
 		panic(fmt.Errorf("unable to locate function %q", name))
 	}
 	if f.Addr != addr {
 		name = uniqueName(name, addr)
-		f, ok = p.funcNames[name]
+		f, ok = p.curOverlay.funcNames[name]
 		if !ok {
 			panic(fmt.Errorf("unable to locate function %q", name))
 		}
@@ -220,9 +218,9 @@ func (p *parser) parseOverlay(addr uint32, body *sym.Overlay) {
 func (p *parser) parseClassEXT(addr, size uint32, t sym.Type, dims []uint32, tag, name string) {
 	name = validName(name)
 	// Duplicate name.
-	if _, ok := p.varNames[name]; ok {
+	if _, ok := p.curOverlay.varNames[name]; ok {
 		name = uniqueName(name, addr)
-	} else if _, ok := p.funcNames[name]; ok {
+	} else if _, ok := p.curOverlay.funcNames[name]; ok {
 		name = uniqueName(name, addr)
 	}
 	cType := p.parseType(t, dims, tag)
@@ -235,8 +233,8 @@ func (p *parser) parseClassEXT(addr, size uint32, t sym.Type, dims []uint32, tag
 				Name: name,
 			},
 		}
-		p.funcs = append(p.funcs, f)
-		p.funcNames[name] = f
+		p.curOverlay.funcs = append(p.curOverlay.funcs, f)
+		p.curOverlay.funcNames[name] = f
 	} else {
 		v := &c.VarDecl{
 			Addr: addr,
@@ -246,8 +244,8 @@ func (p *parser) parseClassEXT(addr, size uint32, t sym.Type, dims []uint32, tag
 				Name: name,
 			},
 		}
-		p.vars = append(p.vars, v)
-		p.varNames[name] = v
+		p.curOverlay.vars = append(p.curOverlay.vars, v)
+		p.curOverlay.varNames[name] = v
 	}
 }
 
@@ -385,6 +383,9 @@ type parser struct {
 	overlays []*Overlay
 	// overlayIDs maps from overlay ID to overlay.
 	overlayIDs map[uint32]*Overlay
+
+	// Current overlay.
+	curOverlay *Overlay
 }
 
 // An Overlay is an overlay appended to the end of the executable.
@@ -431,17 +432,19 @@ type Line struct {
 
 // newParser returns a new parser.
 func newParser() *parser {
+	overlay := &Overlay{
+		varNames:  make(map[string]*c.VarDecl),
+		funcNames: make(map[string]*c.FuncDecl),
+	}
 	return &parser{
 		structs:          make(map[string]*c.StructType),
 		unions:           make(map[string]*c.UnionType),
 		enums:            make(map[string]*c.EnumType),
 		types:            make(map[string]*c.Typedef),
 		uniqueEnumMember: make(map[string]bool),
-		Overlay: &Overlay{
-			varNames:  make(map[string]*c.VarDecl),
-			funcNames: make(map[string]*c.FuncDecl),
-		},
-		overlayIDs: make(map[uint32]*Overlay),
+		Overlay:          overlay,
+		overlayIDs:       make(map[uint32]*Overlay),
+		curOverlay:       overlay,
 	}
 }
 
