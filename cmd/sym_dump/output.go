@@ -107,13 +107,13 @@ func dumpOverlay(w io.Writer, overlay *Overlay) error {
 	}
 	// Print variable declarations.
 	for _, v := range overlay.vars {
-		if _, err := fmt.Fprintf(w, "%s;\n\n", v); err != nil {
+		if _, err := fmt.Fprintf(w, "%s;\n\n", v.Def()); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 	// Print function declarations.
 	for _, f := range overlay.funcs {
-		if _, err := fmt.Fprintf(w, "%s\n\n", f); err != nil {
+		if _, err := fmt.Fprintf(w, "%s\n\n", f.Def()); err != nil {
 			return errors.WithStack(err)
 		}
 	}

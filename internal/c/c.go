@@ -12,12 +12,20 @@ type VarDecl struct {
 	Addr uint32
 	// Size (optional).
 	Size uint32
+	// Storage class.
+	StorageClass StorageClass
 	// Underlying variable.
 	Var
 }
 
 // String returns the string representation of the variable declaration.
 func (v *VarDecl) String() string {
+	return v.Name
+}
+
+// Def returns the C syntax representation of the definition of the variable
+// declaration.
+func (v *VarDecl) Def() string {
 	buf := &strings.Builder{}
 	if v.Addr > 0 {
 		fmt.Fprintf(buf, "// address: 0x%08X\n", v.Addr)
@@ -25,9 +33,23 @@ func (v *VarDecl) String() string {
 	if v.Size > 0 {
 		fmt.Fprintf(buf, "// size: 0x%X\n", v.Size)
 	}
-	fmt.Fprintf(buf, "extern %s", v.Var)
+	fmt.Fprintf(buf, "%s %s", v.StorageClass, v.Var)
 	return buf.String()
 }
+
+//go:generate stringer -linecomment -type StorageClass
+
+// A StorageClass is a storage class.
+type StorageClass uint8
+
+// Base types.
+const (
+	Auto     StorageClass = iota + 1 // auto
+	Extern                           // extern
+	Static                           // static
+	Register                         // register
+	Typedef                          // typedef
+)
 
 // A FuncDecl is a function declaration.
 type FuncDecl struct {
@@ -47,6 +69,12 @@ type FuncDecl struct {
 
 // String returns the string representation of the function declaration.
 func (f *FuncDecl) String() string {
+	return f.Name
+}
+
+// Def returns the C syntax representation of the definition of the function
+// declaration.
+func (f *FuncDecl) Def() string {
 	buf := &strings.Builder{}
 	if f.Addr > 0 {
 		fmt.Fprintf(buf, "// address: 0x%08X\n", f.Addr)

@@ -82,8 +82,7 @@ func (p *parser) parseDecls(syms []*sym.Symbol) {
 		case *sym.Def:
 			switch body.Class {
 			case sym.ClassEXT, sym.ClassSTAT:
-				// TODO: figure out how EXT and STAT differ.
-				p.parseClassEXT(s.Hdr.Value, body.Size, body.Type, nil, "", body.Name)
+				p.parseDef(s.Hdr.Value, body.Size, body.Class, body.Type, nil, "", body.Name)
 			case sym.ClassMOS, sym.ClassSTRTAG, sym.ClassMOU, sym.ClassUNTAG, sym.ClassTPDEF, sym.ClassENTAG, sym.ClassMOE, sym.ClassFIELD:
 				// nothing to do.
 			default:
@@ -92,8 +91,7 @@ func (p *parser) parseDecls(syms []*sym.Symbol) {
 		case *sym.Def2:
 			switch body.Class {
 			case sym.ClassEXT, sym.ClassSTAT:
-				// TODO: figure out how EXT and STAT differ.
-				p.parseClassEXT(s.Hdr.Value, body.Size, body.Type, body.Dims, body.Tag, body.Name)
+				p.parseDef(s.Hdr.Value, body.Size, body.Class, body.Type, body.Dims, body.Tag, body.Name)
 			case sym.ClassMOS, sym.ClassMOU, sym.ClassTPDEF, sym.ClassMOE, sym.ClassFIELD, sym.ClassEOS:
 				// nothing to do.
 			default:
@@ -214,8 +212,8 @@ func (p *parser) parseOverlay(addr uint32, body *sym.Overlay) {
 	p.overlayIDs[overlay.ID] = overlay
 }
 
-// parseClassEXT parses an EXT symbol.
-func (p *parser) parseClassEXT(addr, size uint32, t sym.Type, dims []uint32, tag, name string) {
+// parseDef parses a definition symbol.
+func (p *parser) parseDef(addr, size uint32, class sym.Class, t sym.Type, dims []uint32, tag, name string) {
 	name = validName(name)
 	// Duplicate name.
 	if _, ok := p.curOverlay.varNames[name]; ok {
@@ -223,6 +221,7 @@ func (p *parser) parseClassEXT(addr, size uint32, t sym.Type, dims []uint32, tag
 	} else if _, ok := p.curOverlay.funcNames[name]; ok {
 		name = uniqueName(name, addr)
 	}
+	storageClass := parseClass(class)
 	cType := p.parseType(t, dims, tag)
 	if funcType, ok := cType.(*c.FuncType); ok {
 		f := &c.FuncDecl{
@@ -237,8 +236,9 @@ func (p *parser) parseClassEXT(addr, size uint32, t sym.Type, dims []uint32, tag
 		p.curOverlay.funcNames[name] = f
 	} else {
 		v := &c.VarDecl{
-			Addr: addr,
-			Size: size,
+			Addr:         addr,
+			Size:         size,
+			StorageClass: storageClass,
 			Var: c.Var{
 				Type: cType,
 				Name: name,
@@ -299,9 +299,12 @@ func (p *parser) initTaggedTypes(syms []*sym.Symbol) {
 	p.structs["__vtbl_ptr_type"] = vtblPtrType
 	p.structTags = append(p.structTags, "__vtbl_ptr_type")
 	// Bool used for NULL type.
-	boolDef := &c.Typedef{
-		Type: c.Int,
-		Name: "bool",
+	boolDef := &c.VarDecl{
+		StorageClass: c.Typedef,
+		Var: c.Var{
+			Type: c.Int,
+			Name: "bool",
+		},
 	}
 	p.types["bool"] = boolDef
 	var (
@@ -364,7 +367,7 @@ type parser struct {
 	// enums maps from enum tag to enum type.
 	enums map[string]*c.EnumType
 	// types maps from type name to underlying type definition.
-	types map[string]*c.Typedef
+	types map[string]c.Type
 	// Struct tags in order of occurrence in SYM file.
 	structTags []string
 	// Union tags in order of occurrence in SYM file.
@@ -372,7 +375,7 @@ type parser struct {
 	// Enum tags in order of occurrence in SYM file.
 	enumTags []string
 	// Type definitions in order of occurrence in SYM file.
-	typedefs []*c.Typedef
+	typedefs []c.Type
 	// Tracks unique enum member names.
 	uniqueEnumMember map[string]bool
 
@@ -440,7 +443,7 @@ func newParser() *parser {
 		structs:          make(map[string]*c.StructType),
 		unions:           make(map[string]*c.UnionType),
 		enums:            make(map[string]*c.EnumType),
-		types:            make(map[string]*c.Typedef),
+		types:            make(map[string]c.Type),
 		uniqueEnumMember: make(map[string]bool),
 		Overlay:          overlay,
 		overlayIDs:       make(map[uint32]*Overlay),
@@ -561,9 +564,12 @@ func (p *parser) parseClassUNTAG(body *sym.Def, syms []*sym.Symbol) (n int) {
 // parseClassTPDEF parses a typedef symbol.
 func (p *parser) parseClassTPDEF(t sym.Type, dims []uint32, tag, name string) {
 	name = validName(name)
-	def := &c.Typedef{
-		Type: p.parseType(t, dims, tag),
-		Name: name,
+	def := &c.VarDecl{
+		StorageClass: c.Typedef,
+		Var: c.Var{
+			Type: p.parseType(t, dims, tag),
+			Name: name,
+		},
 	}
 	p.typedefs = append(p.typedefs, def)
 	p.types[name] = def
@@ -752,4 +758,22 @@ func addParam(t *c.FuncType, param c.Var) {
 // uniqueName returns a unique name based on the given name and address.
 func uniqueName(name string, addr uint32) string {
 	return fmt.Sprintf("%s_addr_%08X", name, addr)
+}
+
+// parseClass parses the symbol class into an equivalent C storage class.
+func parseClass(class sym.Class) c.StorageClass {
+	switch class {
+	case sym.ClassAUTO:
+		return c.Auto
+	case sym.ClassEXT:
+		return c.Extern
+	case sym.ClassSTAT:
+		return c.Static
+	case sym.ClassREG:
+		return c.Register
+	case sym.ClassTPDEF:
+		return c.Typedef
+	default:
+		panic(fmt.Errorf("support for symbol class %v not yet implemented", class))
+	}
 }

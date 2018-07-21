@@ -15,31 +15,6 @@ type Type interface {
 	Def() string
 }
 
-// --- [ Type definition ] -----------------------------------------------------
-
-// Typedef is a type definition.
-type Typedef struct {
-	// Underlying type.
-	Type Type
-	// Type name.
-	Name string
-}
-
-// String returns the string representation of the type definition.
-func (t *Typedef) String() string {
-	return t.Name
-}
-
-// Def returns the C syntax representation of the definition of the type.
-func (t *Typedef) Def() string {
-	// HACK, but works. The syntax of the C type system is pre-historic.
-	v := Var{
-		Type: t.Type,
-		Name: t.Name,
-	}
-	return fmt.Sprintf("typedef %s", v)
-}
-
 // --- [ Base type ] -----------------------------------------------------------
 
 //go:generate stringer -linecomment -type BaseType
