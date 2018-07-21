@@ -75,6 +75,7 @@ func (f *FuncDecl) String() string {
 // Def returns the C syntax representation of the definition of the function
 // declaration.
 func (f *FuncDecl) Def() string {
+	// TODO: Print storage class.
 	buf := &strings.Builder{}
 	if f.Addr > 0 {
 		fmt.Fprintf(buf, "// address: 0x%08X\n", f.Addr)
