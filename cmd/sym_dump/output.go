@@ -29,9 +29,10 @@ func dumpTypes(p *parser, outputDir string) error {
 	}
 	defer f.Close()
 	// Print predeclared identifiers.
-	def := p.types["bool"]
-	if _, err := fmt.Fprintf(f, "%s;\n\n", def.Def()); err != nil {
-		return errors.WithStack(err)
+	if def, ok := p.types["bool"]; ok {
+		if _, err := fmt.Fprintf(f, "%s;\n\n", def.Def()); err != nil {
+			return errors.WithStack(err)
+		}
 	}
 	// Print enums.
 	for _, tag := range p.enumTags {
@@ -203,6 +204,97 @@ func dumpSourceFile(w io.Writer, src *SourceFile) error {
 	// Print function declarations.
 	for _, f := range src.funcs {
 		if _, err := fmt.Fprintf(w, "%s\n\n", f.Def()); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return nil
+}
+
+// --- [ IDA scripts ] ---------------------------------------------------------
+
+// dumpIDAScripts outputs the declarations recorded by the parser to IDA scripts
+// stored in the output directory.
+func dumpIDAScripts(p *parser, outputDir string) error {
+	// Create scripts for declarations of default binary.
+	if err := dumpIDAOverlay(p.Overlay, outputDir); err != nil {
+		return errors.WithStack(err)
+	}
+	// Create scripts for declarations of overlays.
+	for _, overlay := range p.overlays {
+		if err := dumpIDAOverlay(overlay, outputDir); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	return nil
+}
+
+// IDA script names.
+const (
+	// Scripts mapping addresses to identifiers.
+	idaIdentsName = "make_psx.py"
+	// Scripts adding function signatures to identifiers.
+	idaFuncsName = "set_funcs.py"
+	// Scripts adding global variable types to identifiers.
+	idaVarsName = "set_vars.py"
+)
+
+// dumpIDAOverlay outputs the declarations of the overlay to IDA scripts.
+func dumpIDAOverlay(overlay *Overlay, outputDir string) error {
+	// Create scripts for mapping addresses to identifiers.
+	dir := outputDir
+	if overlay.ID != 0 {
+		overlayDir := fmt.Sprintf("overlay_%x", overlay.ID)
+		dir = filepath.Join(outputDir, overlayDir)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	identsPath := filepath.Join(dir, idaIdentsName)
+	fmt.Println("creating:", identsPath)
+	w, err := os.Create(identsPath)
+	if err != nil {
+		return errors.Wrapf(err, "unable to create declarations IDA script %q", identsPath)
+	}
+	defer w.Close()
+	for _, f := range overlay.funcs {
+		if _, err := fmt.Fprintf(w, "MakeNameEx(0x%08X, %q, SN_NOWARN)\n", f.Addr, f.Name); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	for _, v := range overlay.vars {
+		if _, err := fmt.Fprintf(w, "MakeNameEx(0x%08X, %q, SN_NOWARN)\n", v.Addr, v.Name); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	// Create scripts for adding function signatures to identifiers.
+	funcsPath := filepath.Join(dir, idaFuncsName)
+	fmt.Println("creating:", funcsPath)
+	w, err = os.Create(funcsPath)
+	if err != nil {
+		return errors.Wrapf(err, "unable to create function signatures IDA script %q", funcsPath)
+	}
+	defer w.Close()
+	for _, f := range overlay.funcs {
+		if _, err := fmt.Fprintf(w, "del_items(0x%08X)\n", f.Addr); err != nil {
+			return errors.WithStack(err)
+		}
+		if _, err := fmt.Fprintf(w, "SetType(0x%08X, %q)\n", f.Addr, f.Var); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	// Create scripts adding global variable types to identifiers.
+	varsPath := filepath.Join(dir, idaVarsName)
+	fmt.Println("creating:", varsPath)
+	w, err = os.Create(varsPath)
+	if err != nil {
+		return errors.Wrapf(err, "unable to create global variables IDA script %q", varsPath)
+	}
+	defer w.Close()
+	for _, v := range overlay.vars {
+		if _, err := fmt.Fprintf(w, "del_items(0x%08X)\n", v.Addr); err != nil {
+			return errors.WithStack(err)
+		}
+		if _, err := fmt.Fprintf(w, "SetType(0x%08X, %q)\n", v.Addr, v.Var); err != nil {
 			return errors.WithStack(err)
 		}
 	}

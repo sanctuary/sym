@@ -50,6 +50,8 @@ type StructType struct {
 	Tag string
 	// Structure fields.
 	Fields []Field
+	// Struct methods.
+	Methods []Field
 }
 
 // String returns the string representation of the structure type.
@@ -76,6 +78,7 @@ func (t *StructType) Def() string {
 		}
 		fmt.Fprintf(buf, "\t%s;\n", field)
 	}
+	// TODO: Print methods.
 	buf.WriteString("}")
 	return buf.String()
 }

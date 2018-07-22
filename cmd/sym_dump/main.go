@@ -31,6 +31,8 @@ func main() {
 		outputC bool
 		// Output directory.
 		outputDir string
+		// Output IDA scripts.
+		outputIDA bool
 		// Split output into source files.
 		splitSrc bool
 		// Output C types.
@@ -38,6 +40,7 @@ func main() {
 	)
 	flag.BoolVar(&outputC, "c", false, "output C types and declarations")
 	flag.StringVar(&outputDir, "dir", dumpDir, "output directory")
+	flag.BoolVar(&outputIDA, "ida", false, "output IDA scripts")
 	flag.BoolVar(&splitSrc, "src", false, "split output into source files")
 	flag.BoolVar(&outputTypes, "types", false, "output C types")
 	flag.Usage = usage
@@ -76,6 +79,23 @@ func main() {
 				log.Fatalf("%+v", errors.WithStack(err))
 			}
 			if err := dumpTypes(p, outputDir); err != nil {
+				log.Fatalf("%+v", err)
+			}
+		case outputIDA:
+			// Output IDA scripts.
+			p := newParser()
+			p.parseTypes(f.Syms)
+			// Delete bool type and as they cause issues with IDA.
+			delete(p.types, "bool")
+			delete(p.types, "__int64")
+			p.parseDecls(f.Syms)
+			if err := initOutputDir(outputDir); err != nil {
+				log.Fatalf("%+v", errors.WithStack(err))
+			}
+			if err := dumpTypes(p, outputDir); err != nil {
+				log.Fatalf("%+v", err)
+			}
+			if err := dumpIDAScripts(p, outputDir); err != nil {
 				log.Fatalf("%+v", err)
 			}
 		default:

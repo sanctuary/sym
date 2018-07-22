@@ -108,8 +108,7 @@ func (p *parser) parseStructTag(body *sym.Def, syms []*sym.Symbol) (n int) {
 		switch body := s.Body.(type) {
 		case *sym.Def:
 			switch body.Class {
-			case sym.ClassMOS, sym.ClassFIELD:
-				// TODO: Figure out how to handle FIELD. For now, parse as MOS.
+			case sym.ClassMOS:
 				field := c.Field{
 					Offset: s.Hdr.Value,
 					Size:   body.Size,
@@ -119,6 +118,17 @@ func (p *parser) parseStructTag(body *sym.Def, syms []*sym.Symbol) (n int) {
 					},
 				}
 				t.Fields = append(t.Fields, field)
+			case sym.ClassFIELD:
+				// TODO: Figure out what FIELD represents. Use method for now.
+				method := c.Field{
+					Offset: s.Hdr.Value,
+					Size:   body.Size,
+					Var: c.Var{
+						Type: p.parseType(body.Type, nil, ""),
+						Name: validName(body.Name),
+					},
+				}
+				t.Methods = append(t.Methods, method)
 			default:
 				panic(fmt.Errorf("support for class %q not yet implemented", body.Class))
 			}
