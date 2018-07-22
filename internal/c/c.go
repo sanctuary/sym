@@ -8,12 +8,13 @@ import (
 
 // A VarDecl is a variable declaration.
 type VarDecl struct {
-	// Address (optional).
+	// Address, frame pointer delta, or register depending on storage class
+	// (optional).
 	Addr uint32
 	// Size (optional).
 	Size uint32
 	// Storage class.
-	StorageClass StorageClass
+	Class StorageClass
 	// Underlying variable.
 	Var
 }
@@ -27,13 +28,22 @@ func (v *VarDecl) String() string {
 // declaration.
 func (v *VarDecl) Def() string {
 	buf := &strings.Builder{}
-	if v.Addr > 0 {
-		fmt.Fprintf(buf, "// address: 0x%08X\n", v.Addr)
+	switch v.Class {
+	case Register:
+		fmt.Fprintf(buf, "// register: %d\n", v.Addr)
+	default:
+		if v.Addr > 0 {
+			fmt.Fprintf(buf, "// address: 0x%08X\n", v.Addr)
+		}
 	}
 	if v.Size > 0 {
 		fmt.Fprintf(buf, "// size: 0x%X\n", v.Size)
 	}
-	fmt.Fprintf(buf, "%s %s", v.StorageClass, v.Var)
+	if v.Class == 0 {
+		fmt.Fprintf(buf, "%s", v.Var)
+	} else {
+		fmt.Fprintf(buf, "%s %s", v.Class, v.Var)
+	}
 	return buf.String()
 }
 
@@ -92,7 +102,9 @@ func (f *FuncDecl) Def() string {
 		indent := strings.Repeat("\t", i)
 		fmt.Fprintf(buf, "%s{\n", indent)
 		for _, local := range block.Locals {
-			fmt.Fprintf(buf, "%s\t%s;\n", indent, local)
+			indent := strings.Repeat("\t", i+1)
+			l := strings.Replace(local.Def(), "\n", "\n"+indent, -1)
+			fmt.Fprintf(buf, "%s%s;\n", indent, l)
 		}
 	}
 	for i := len(f.Blocks) - 1; i >= 0; i-- {
@@ -109,5 +121,5 @@ type Block struct {
 	// End line number (relative to the function).
 	LineEnd uint32
 	// Local variables.
-	Locals []Var
+	Locals []*VarDecl
 }

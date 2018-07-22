@@ -219,7 +219,7 @@ type FuncType struct {
 	// Return type.
 	RetType Type
 	// Function parameters.
-	Params []Var
+	Params []*VarDecl
 	// Variadic function.
 	Variadic bool
 }
@@ -287,7 +287,7 @@ func (v Var) String() string {
 			if i != 0 {
 				buf.WriteString(", ")
 			}
-			buf.WriteString(param.String())
+			buf.WriteString(param.Var.String())
 		}
 		if t.Variadic {
 			if len(t.Params) > 0 {
