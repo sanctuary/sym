@@ -223,11 +223,7 @@ func getSourceFiles(p *parser) []*SourceFile {
 			srcPathFromAddr[line.Addr] = line.Path
 		}
 		for _, v := range overlay.vars {
-			srcPath, ok := srcPathFromAddr[v.Addr]
-			if !ok {
-				//log.Printf("unable to locate source file of global variable %q at address 0x%08X", v.Name, v.Addr)
-				srcPath = fmt.Sprintf("unknown_%x.cpp", overlay.ID)
-			}
+			srcPath := fmt.Sprintf("global_%x.cpp", overlay.ID)
 			src, ok := sources[srcPath]
 			if !ok {
 				src = &SourceFile{
@@ -240,8 +236,7 @@ func getSourceFiles(p *parser) []*SourceFile {
 		for _, f := range overlay.funcs {
 			srcPath, ok := srcPathFromAddr[f.Addr]
 			if !ok {
-				//log.Printf("unable to locate source file of function %q at address 0x%08X", f.Name, f.Addr)
-				srcPath = fmt.Sprintf("unknown_%x.cpp", overlay.ID)
+				panic(fmt.Errorf("unable to locate source file of function %q at address 0x%08X", f.Name, f.Addr))
 			}
 			src, ok := sources[srcPath]
 			if !ok {
