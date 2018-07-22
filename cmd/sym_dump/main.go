@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sanctuary/sym"
+	"github.com/sanctuary/sym/internal/c"
 )
 
 // usage prints usage information.
@@ -85,17 +86,26 @@ func main() {
 			// Output IDA scripts.
 			p := newParser()
 			p.parseTypes(f.Syms)
-			// Delete bool type and as they cause issues with IDA.
-			delete(p.types, "bool")
-			delete(p.types, "__int64")
 			p.parseDecls(f.Syms)
 			if err := initOutputDir(outputDir); err != nil {
 				log.Fatalf("%+v", errors.WithStack(err))
 			}
-			if err := dumpTypes(p, outputDir); err != nil {
+			if err := dumpIDAScripts(p, outputDir); err != nil {
 				log.Fatalf("%+v", err)
 			}
-			if err := dumpIDAScripts(p, outputDir); err != nil {
+			// Delete bool and __int64 types as they cause issues with IDA.
+			delete(p.types, "bool")
+			for i, def := range p.typedefs {
+				if v, ok := def.(*c.VarDecl); ok {
+					if v.Name == "__int64" {
+						defs := append(p.typedefs[:i], p.typedefs[i+1:]...)
+						p.typedefs = defs
+						break
+					}
+				}
+			}
+			delete(p.types, "__int64")
+			if err := dumpTypes(p, outputDir); err != nil {
 				log.Fatalf("%+v", err)
 			}
 		default:
