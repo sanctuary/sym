@@ -31,11 +31,14 @@ func main() {
 		outputC bool
 		// Output directory.
 		outputDir string
+		// Split output into source files.
+		splitSrc bool
 		// Output C types.
 		outputTypes bool
 	)
 	flag.BoolVar(&outputC, "c", false, "output C types and declarations")
 	flag.StringVar(&outputDir, "dir", dumpDir, "output directory")
+	flag.BoolVar(&splitSrc, "src", false, "split output into source files")
 	flag.BoolVar(&outputTypes, "types", false, "output C types")
 	flag.Usage = usage
 	flag.Parse()
@@ -56,8 +59,14 @@ func main() {
 			if err := dumpTypes(p, outputDir); err != nil {
 				log.Fatalf("%+v", err)
 			}
-			if err := dumpDecls(p, outputDir); err != nil {
-				log.Fatalf("%+v", err)
+			if splitSrc {
+				if err := dumpSourceFiles(p, outputDir); err != nil {
+					log.Fatalf("%+v", err)
+				}
+			} else {
+				if err := dumpDecls(p, outputDir); err != nil {
+					log.Fatalf("%+v", err)
+				}
 			}
 		case outputTypes:
 			// Output C types.

@@ -145,6 +145,16 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 	}
 	// Parse function declaration.
 	f.LineStart = body.Line
+	curLine := Line{
+		Path: body.Path,
+		Line: body.Line,
+	}
+	line := &Line{
+		Addr: addr,
+		Path: curLine.Path,
+		Line: curLine.Line,
+	}
+	p.lines = append(p.lines, line)
 	var blocks blockStack
 	var curBlock *c.Block
 	for n = 0; n < len(syms); n++ {
@@ -162,6 +172,13 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 			}
 			f.Blocks = append(f.Blocks, block)
 			curBlock = block
+			curLine.Line += body.Line - 1
+			line := &Line{
+				Addr: s.Hdr.Value,
+				Path: curLine.Path,
+				Line: curLine.Line,
+			}
+			p.lines = append(p.lines, line)
 		case *sym.BlockEnd:
 			curBlock.LineEnd = body.Line
 			if !blocks.empty() {
@@ -169,6 +186,13 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 			} else {
 				curBlock = nil
 			}
+			curLine.Line += body.Line - 1
+			line := &Line{
+				Addr: s.Hdr.Value,
+				Path: curLine.Path,
+				Line: curLine.Line,
+			}
+			p.lines = append(p.lines, line)
 		case *sym.Def:
 			t := p.parseType(body.Type, nil, "")
 			v := p.parseLocalDecl(s.Hdr.Value, body.Size, body.Class, t, body.Name)
