@@ -257,12 +257,12 @@ func dumpIDAOverlay(overlay *Overlay, outputDir string) error {
 	}
 	defer w.Close()
 	for _, f := range overlay.funcs {
-		if _, err := fmt.Fprintf(w, "MakeNameEx(0x%08X, %q, SN_NOWARN)\n", f.Addr, f.Name); err != nil {
+		if _, err := fmt.Fprintf(w, "set_name(0x%08X, %q, SN_NOWARN)\n", f.Addr, f.Name); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 	for _, v := range overlay.vars {
-		if _, err := fmt.Fprintf(w, "MakeNameEx(0x%08X, %q, SN_NOWARN)\n", v.Addr, v.Name); err != nil {
+		if _, err := fmt.Fprintf(w, "set_name(0x%08X, %q, SN_NOWARN)\n", v.Addr, v.Name); err != nil {
 			return errors.WithStack(err)
 		}
 	}
