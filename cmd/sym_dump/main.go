@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sanctuary/sym"
+	"github.com/sanctuary/sym/csym"
 	"github.com/sanctuary/sym/internal/c"
 )
 
@@ -54,9 +55,9 @@ func main() {
 		switch {
 		case outputC:
 			// Output C types and declarations.
-			p := newParser()
-			p.parseTypes(f.Syms)
-			p.parseDecls(f.Syms)
+			p := csym.NewParser()
+			p.ParseTypes(f.Syms)
+			p.ParseDecls(f.Syms)
 			if err := initOutputDir(outputDir); err != nil {
 				log.Fatalf("%+v", errors.WithStack(err))
 			}
@@ -74,8 +75,8 @@ func main() {
 			}
 		case outputTypes:
 			// Output C types.
-			p := newParser()
-			p.parseTypes(f.Syms)
+			p := csym.NewParser()
+			p.ParseTypes(f.Syms)
 			if err := initOutputDir(outputDir); err != nil {
 				log.Fatalf("%+v", errors.WithStack(err))
 			}
@@ -84,9 +85,9 @@ func main() {
 			}
 		case outputIDA:
 			// Output IDA scripts.
-			p := newParser()
-			p.parseTypes(f.Syms)
-			p.parseDecls(f.Syms)
+			p := csym.NewParser()
+			p.ParseTypes(f.Syms)
+			p.ParseDecls(f.Syms)
 			if err := initOutputDir(outputDir); err != nil {
 				log.Fatalf("%+v", errors.WithStack(err))
 			}
@@ -94,17 +95,17 @@ func main() {
 				log.Fatalf("%+v", err)
 			}
 			// Delete bool and __int64 types as they cause issues with IDA.
-			delete(p.types, "bool")
-			for i, def := range p.typedefs {
+			delete(p.Types, "bool")
+			for i, def := range p.Typedefs {
 				if v, ok := def.(*c.VarDecl); ok {
 					if v.Name == "__int64" {
-						defs := append(p.typedefs[:i], p.typedefs[i+1:]...)
-						p.typedefs = defs
+						defs := append(p.Typedefs[:i], p.Typedefs[i+1:]...)
+						p.Typedefs = defs
 						break
 					}
 				}
 			}
-			delete(p.types, "__int64")
+			delete(p.Types, "__int64")
 			if err := dumpTypes(p, outputDir); err != nil {
 				log.Fatalf("%+v", err)
 			}

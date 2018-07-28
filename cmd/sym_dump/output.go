@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/sanctuary/sym/csym"
 	"github.com/sanctuary/sym/internal/c"
 )
 
@@ -19,7 +20,7 @@ const typesName = "types.h"
 
 // dumpTypes outputs the type information recorded by the parser to a C header
 // stored in the output directory.
-func dumpTypes(p *parser, outputDir string) error {
+func dumpTypes(p *csym.Parser, outputDir string) error {
 	// Create output file.
 	typesPath := filepath.Join(outputDir, typesName)
 	fmt.Println("creating:", typesPath)
@@ -29,34 +30,34 @@ func dumpTypes(p *parser, outputDir string) error {
 	}
 	defer f.Close()
 	// Print predeclared identifiers.
-	if def, ok := p.types["bool"]; ok {
+	if def, ok := p.Types["bool"]; ok {
 		if _, err := fmt.Fprintf(f, "%s;\n\n", def.Def()); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 	// Print enums.
-	for _, tag := range p.enumTags {
-		t := p.enums[tag]
+	for _, tag := range p.EnumTags {
+		t := p.Enums[tag]
 		if _, err := fmt.Fprintf(f, "%s;\n\n", t.Def()); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 	// Print structs.
-	for _, tag := range p.structTags {
-		t := p.structs[tag]
+	for _, tag := range p.StructTags {
+		t := p.Structs[tag]
 		if _, err := fmt.Fprintf(f, "%s;\n\n", t.Def()); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 	// Print unions.
-	for _, tag := range p.unionTags {
-		t := p.unions[tag]
+	for _, tag := range p.UnionTags {
+		t := p.Unions[tag]
 		if _, err := fmt.Fprintf(f, "%s;\n\n", t.Def()); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 	// Print typedefs.
-	for _, def := range p.typedefs {
+	for _, def := range p.Typedefs {
 		if _, err := fmt.Fprintf(f, "%s;\n\n", def.Def()); err != nil {
 			return errors.WithStack(err)
 		}
@@ -75,7 +76,7 @@ const (
 
 // dumpDecls outputs the declarations recorded by the parser to C headers stored
 // in the output directory.
-func dumpDecls(p *parser, outputDir string) error {
+func dumpDecls(p *csym.Parser, outputDir string) error {
 	// Create output file.
 	declsPath := filepath.Join(outputDir, declsName)
 	fmt.Println("creating:", declsPath)
@@ -89,7 +90,7 @@ func dumpDecls(p *parser, outputDir string) error {
 		return errors.WithStack(err)
 	}
 	// Store declarations of overlays.
-	for _, overlay := range p.overlays {
+	for _, overlay := range p.Overlays {
 		overlayName := fmt.Sprintf(overlayNameFormat, overlay.ID)
 		overlayPath := filepath.Join(outputDir, overlayName)
 		fmt.Println("creating:", overlayPath)
@@ -106,7 +107,7 @@ func dumpDecls(p *parser, outputDir string) error {
 }
 
 // dumpOverlay outputs the declarations of the overlay, writing to w.
-func dumpOverlay(w io.Writer, overlay *Overlay) error {
+func dumpOverlay(w io.Writer, overlay *csym.Overlay) error {
 	// Add types.h include directory.
 	if _, err := fmt.Fprintf(w, "#include %q\n\n", typesName); err != nil {
 		return errors.WithStack(err)
@@ -117,13 +118,13 @@ func dumpOverlay(w io.Writer, overlay *Overlay) error {
 		}
 	}
 	// Print variable declarations.
-	for _, v := range overlay.vars {
+	for _, v := range overlay.Vars {
 		if _, err := fmt.Fprintf(w, "%s;\n\n", v.Def()); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 	// Print function declarations.
-	for _, f := range overlay.funcs {
+	for _, f := range overlay.Funcs {
 		if _, err := fmt.Fprintf(w, "%s\n\n", f.Def()); err != nil {
 			return errors.WithStack(err)
 		}
@@ -145,7 +146,7 @@ type SourceFile struct {
 
 // dumpSourceFiles outputs the source files recorded by the parser to the output
 // directory.
-func dumpSourceFiles(p *parser, outputDir string) error {
+func dumpSourceFiles(p *csym.Parser, outputDir string) error {
 	srcs := getSourceFiles(p)
 	for _, src := range srcs {
 		// Create source file directory.
@@ -185,13 +186,13 @@ func dumpSourceFile(w io.Writer, src *SourceFile) error {
 	names := make(map[string]bool)
 	for _, v := range src.vars {
 		if names[v.Name] {
-			v.Name = uniqueName(v.Name, v.Addr)
+			v.Name = csym.UniqueName(v.Name, v.Addr)
 		}
 		names[v.Name] = true
 	}
 	for _, f := range src.funcs {
 		if names[f.Name] {
-			f.Name = uniqueName(f.Name, f.Addr)
+			f.Name = csym.UniqueName(f.Name, f.Addr)
 		}
 		names[f.Name] = true
 	}
@@ -214,13 +215,13 @@ func dumpSourceFile(w io.Writer, src *SourceFile) error {
 
 // dumpIDAScripts outputs the declarations recorded by the parser to IDA scripts
 // stored in the output directory.
-func dumpIDAScripts(p *parser, outputDir string) error {
+func dumpIDAScripts(p *csym.Parser, outputDir string) error {
 	// Create scripts for declarations of default binary.
 	if err := dumpIDAOverlay(p.Overlay, outputDir); err != nil {
 		return errors.WithStack(err)
 	}
 	// Create scripts for declarations of overlays.
-	for _, overlay := range p.overlays {
+	for _, overlay := range p.Overlays {
 		if err := dumpIDAOverlay(overlay, outputDir); err != nil {
 			return errors.WithStack(err)
 		}
@@ -239,7 +240,7 @@ const (
 )
 
 // dumpIDAOverlay outputs the declarations of the overlay to IDA scripts.
-func dumpIDAOverlay(overlay *Overlay, outputDir string) error {
+func dumpIDAOverlay(overlay *csym.Overlay, outputDir string) error {
 	// Create scripts for mapping addresses to identifiers.
 	dir := outputDir
 	if overlay.ID != 0 {
@@ -256,12 +257,12 @@ func dumpIDAOverlay(overlay *Overlay, outputDir string) error {
 		return errors.Wrapf(err, "unable to create declarations IDA script %q", identsPath)
 	}
 	defer w.Close()
-	for _, f := range overlay.funcs {
+	for _, f := range overlay.Funcs {
 		if _, err := fmt.Fprintf(w, "set_name(0x%08X, %q, SN_NOWARN)\n", f.Addr, f.Name); err != nil {
 			return errors.WithStack(err)
 		}
 	}
-	for _, v := range overlay.vars {
+	for _, v := range overlay.Vars {
 		if _, err := fmt.Fprintf(w, "set_name(0x%08X, %q, SN_NOWARN)\n", v.Addr, v.Name); err != nil {
 			return errors.WithStack(err)
 		}
@@ -274,7 +275,7 @@ func dumpIDAOverlay(overlay *Overlay, outputDir string) error {
 		return errors.Wrapf(err, "unable to create function signatures IDA script %q", funcsPath)
 	}
 	defer w.Close()
-	for _, f := range overlay.funcs {
+	for _, f := range overlay.Funcs {
 		if _, err := fmt.Fprintf(w, "del_items(0x%08X)\n", f.Addr); err != nil {
 			return errors.WithStack(err)
 		}
@@ -290,7 +291,7 @@ func dumpIDAOverlay(overlay *Overlay, outputDir string) error {
 		return errors.Wrapf(err, "unable to create global variables IDA script %q", varsPath)
 	}
 	defer w.Close()
-	for _, v := range overlay.vars {
+	for _, v := range overlay.Vars {
 		if _, err := fmt.Fprintf(w, "del_items(0x%08X)\n", v.Addr); err != nil {
 			return errors.WithStack(err)
 		}
@@ -304,17 +305,17 @@ func dumpIDAOverlay(overlay *Overlay, outputDir string) error {
 // ### [ Helper functions ] ####################################################
 
 // getSourceFiles returns the source files recorded by the parser.
-func getSourceFiles(p *parser) []*SourceFile {
+func getSourceFiles(p *csym.Parser) []*SourceFile {
 	// Record source file information from overlays.
-	overlays := append(p.overlays, p.Overlay)
+	overlays := append(p.Overlays, p.Overlay)
 	// sources maps from source path to source file.
 	sources := make(map[string]*SourceFile)
 	for _, overlay := range overlays {
 		srcPathFromAddr := make(map[uint32]string)
-		for _, line := range overlay.lines {
+		for _, line := range overlay.Lines {
 			srcPathFromAddr[line.Addr] = line.Path
 		}
-		for _, v := range overlay.vars {
+		for _, v := range overlay.Vars {
 			srcPath := fmt.Sprintf("global_%x.cpp", overlay.ID)
 			src, ok := sources[srcPath]
 			if !ok {
@@ -325,7 +326,7 @@ func getSourceFiles(p *parser) []*SourceFile {
 			}
 			src.vars = append(src.vars, v)
 		}
-		for _, f := range overlay.funcs {
+		for _, f := range overlay.Funcs {
 			srcPath, ok := srcPathFromAddr[f.Addr]
 			if !ok {
 				panic(fmt.Errorf("unable to locate source file of function %q at address 0x%08X", f.Name, f.Addr))

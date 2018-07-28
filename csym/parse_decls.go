@@ -1,4 +1,4 @@
-package main
+package csym
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 	"github.com/sanctuary/sym/internal/c"
 )
 
-// parseDecls parses the symbols into the equivalent C declarations.
-func (p *parser) parseDecls(syms []*sym.Symbol) {
+// ParseDecls parses the symbols into the equivalent C declarations.
+func (p *Parser) ParseDecls(syms []*sym.Symbol) {
 	for i := 0; i < len(syms); i++ {
 		s := syms[i]
 		switch body := s.Body.(type) {
@@ -57,7 +57,7 @@ func (p *parser) parseDecls(syms []*sym.Symbol) {
 }
 
 // parseSymbol parses a symbol and its associated address.
-func (p *parser) parseSymbol(addr uint32, name string) {
+func (p *Parser) parseSymbol(addr uint32, name string) {
 	// TODO: name = validName(name)?
 	symbol := &Symbol{
 		Addr: addr,
@@ -67,7 +67,7 @@ func (p *parser) parseSymbol(addr uint32, name string) {
 }
 
 // parseLineNumbers parses a line numbers sequence of symbols.
-func (p *parser) parseLineNumbers(addr uint32, body *sym.SetSLD2, syms []*sym.Symbol) (n int) {
+func (p *Parser) parseLineNumbers(addr uint32, body *sym.SetSLD2, syms []*sym.Symbol) (n int) {
 	curLine := Line{
 		Path: body.Path,
 		Line: body.Line,
@@ -77,7 +77,7 @@ func (p *parser) parseLineNumbers(addr uint32, body *sym.SetSLD2, syms []*sym.Sy
 		Path: curLine.Path,
 		Line: curLine.Line,
 	}
-	p.curOverlay.lines = append(p.curOverlay.lines, line)
+	p.curOverlay.Lines = append(p.curOverlay.Lines, line)
 	for n = 0; n < len(syms); n++ {
 		s := syms[n]
 		switch body := s.Body.(type) {
@@ -88,7 +88,7 @@ func (p *parser) parseLineNumbers(addr uint32, body *sym.SetSLD2, syms []*sym.Sy
 				Path: curLine.Path,
 				Line: curLine.Line,
 			}
-			p.curOverlay.lines = append(p.curOverlay.lines, line)
+			p.curOverlay.Lines = append(p.curOverlay.Lines, line)
 		case *sym.IncSLDByte:
 			curLine.Line += uint32(body.Inc)
 			line := &Line{
@@ -96,7 +96,7 @@ func (p *parser) parseLineNumbers(addr uint32, body *sym.SetSLD2, syms []*sym.Sy
 				Path: curLine.Path,
 				Line: curLine.Line,
 			}
-			p.curOverlay.lines = append(p.curOverlay.lines, line)
+			p.curOverlay.Lines = append(p.curOverlay.Lines, line)
 		case *sym.IncSLDWord:
 			curLine.Line += uint32(body.Inc)
 			line := &Line{
@@ -104,7 +104,7 @@ func (p *parser) parseLineNumbers(addr uint32, body *sym.SetSLD2, syms []*sym.Sy
 				Path: curLine.Path,
 				Line: curLine.Line,
 			}
-			p.curOverlay.lines = append(p.curOverlay.lines, line)
+			p.curOverlay.Lines = append(p.curOverlay.Lines, line)
 		case *sym.SetSLD:
 			curLine.Line = body.Line
 			line := &Line{
@@ -112,7 +112,7 @@ func (p *parser) parseLineNumbers(addr uint32, body *sym.SetSLD2, syms []*sym.Sy
 				Path: curLine.Path,
 				Line: curLine.Line,
 			}
-			p.curOverlay.lines = append(p.curOverlay.lines, line)
+			p.curOverlay.Lines = append(p.curOverlay.Lines, line)
 		case *sym.SetSLD2:
 			curLine.Path = body.Path
 			curLine.Line = body.Line
@@ -121,7 +121,7 @@ func (p *parser) parseLineNumbers(addr uint32, body *sym.SetSLD2, syms []*sym.Sy
 				Path: curLine.Path,
 				Line: curLine.Line,
 			}
-			p.curOverlay.lines = append(p.curOverlay.lines, line)
+			p.curOverlay.Lines = append(p.curOverlay.Lines, line)
 		case *sym.EndSLD:
 			return n + 1
 		default:
@@ -133,7 +133,7 @@ func (p *parser) parseLineNumbers(addr uint32, body *sym.SetSLD2, syms []*sym.Sy
 }
 
 // parseFunc parses a function sequence of symbols.
-func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol) (n int) {
+func (p *Parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol) (n int) {
 	f, funcType := findFunc(p, body.Name, addr)
 	// Ignore duplicate function (already parsed).
 	if f.LineStart != 0 {
@@ -154,7 +154,7 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 		Path: curLine.Path,
 		Line: curLine.Line,
 	}
-	p.lines = append(p.lines, line)
+	p.curOverlay.Lines = append(p.curOverlay.Lines, line)
 	var blocks blockStack
 	var curBlock *c.Block
 	for n = 0; n < len(syms); n++ {
@@ -178,7 +178,7 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 				Path: curLine.Path,
 				Line: curLine.Line,
 			}
-			p.lines = append(p.lines, line)
+			p.curOverlay.Lines = append(p.curOverlay.Lines, line)
 		case *sym.BlockEnd:
 			curBlock.LineEnd = body.Line
 			if !blocks.empty() {
@@ -192,7 +192,7 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 				Path: curLine.Path,
 				Line: curLine.Line,
 			}
-			p.lines = append(p.lines, line)
+			p.curOverlay.Lines = append(p.curOverlay.Lines, line)
 		case *sym.Def:
 			t := p.parseType(body.Type, nil, "")
 			v := p.parseLocalDecl(s.Hdr.Value, body.Size, body.Class, t, body.Name)
@@ -217,7 +217,7 @@ func (p *parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 }
 
 // parseLocalDecl parses a local declaration symbol.
-func (p *parser) parseLocalDecl(addr, size uint32, class sym.Class, t c.Type, name string) *c.VarDecl {
+func (p *Parser) parseLocalDecl(addr, size uint32, class sym.Class, t c.Type, name string) *c.VarDecl {
 	name = validName(name)
 	v := &c.VarDecl{
 		Addr:  addr,
@@ -239,12 +239,12 @@ func (p *parser) parseLocalDecl(addr, size uint32, class sym.Class, t c.Type, na
 //    }
 
 // parseGlobalDecl parses a global declaration symbol.
-func (p *parser) parseGlobalDecl(addr, size uint32, class sym.Class, t c.Type, name string) {
+func (p *Parser) parseGlobalDecl(addr, size uint32, class sym.Class, t c.Type, name string) {
 	name = validName(name)
 	if _, ok := t.(*c.FuncType); ok {
 		// Make name unique if already present.
 		if _, ok := p.curOverlay.funcNames[name]; ok {
-			name = uniqueName(name, addr)
+			name = UniqueName(name, addr)
 		}
 		f := &c.FuncDecl{
 			Addr: addr,
@@ -254,13 +254,13 @@ func (p *parser) parseGlobalDecl(addr, size uint32, class sym.Class, t c.Type, n
 				Name: name,
 			},
 		}
-		p.curOverlay.funcs = append(p.curOverlay.funcs, f)
+		p.curOverlay.Funcs = append(p.curOverlay.Funcs, f)
 		p.curOverlay.funcNames[name] = f
 		return
 	}
 	// Make name unique if already present.
 	if _, ok := p.curOverlay.varNames[name]; ok {
-		name = uniqueName(name, addr)
+		name = UniqueName(name, addr)
 	}
 	v := &c.VarDecl{
 		Addr:  addr,
@@ -271,12 +271,12 @@ func (p *parser) parseGlobalDecl(addr, size uint32, class sym.Class, t c.Type, n
 			Name: name,
 		},
 	}
-	p.curOverlay.vars = append(p.curOverlay.vars, v)
+	p.curOverlay.Vars = append(p.curOverlay.Vars, v)
 	p.curOverlay.varNames[name] = v
 }
 
 // parseOverlay parses an overlay symbol.
-func (p *parser) parseOverlay(addr uint32, body *sym.Overlay) {
+func (p *Parser) parseOverlay(addr uint32, body *sym.Overlay) {
 	overlay := &Overlay{
 		Addr:      addr,
 		ID:        body.ID,
@@ -284,21 +284,21 @@ func (p *parser) parseOverlay(addr uint32, body *sym.Overlay) {
 		varNames:  make(map[string]*c.VarDecl),
 		funcNames: make(map[string]*c.FuncDecl),
 	}
-	p.overlays = append(p.overlays, overlay)
+	p.Overlays = append(p.Overlays, overlay)
 	p.overlayIDs[overlay.ID] = overlay
 }
 
 // ### [ Helper functions ] ####################################################
 
 // findFunc returns the function with the given name and address.
-func findFunc(p *parser, name string, addr uint32) (*c.FuncDecl, *c.FuncType) {
+func findFunc(p *Parser, name string, addr uint32) (*c.FuncDecl, *c.FuncType) {
 	name = validName(name)
 	f, ok := p.curOverlay.funcNames[name]
 	if !ok {
 		panic(fmt.Errorf("unable to locate function %q", name))
 	}
 	if f.Addr != addr {
-		name = uniqueName(name, addr)
+		name = UniqueName(name, addr)
 		f, ok = p.curOverlay.funcNames[name]
 		if !ok {
 			panic(fmt.Errorf("unable to locate function %q", name))
@@ -311,8 +311,8 @@ func findFunc(p *parser, name string, addr uint32) (*c.FuncDecl, *c.FuncType) {
 	return f, funcType
 }
 
-// uniqueName returns a unique name based on the given name and address.
-func uniqueName(name string, addr uint32) string {
+// UniqueName returns a unique name based on the given name and address.
+func UniqueName(name string, addr uint32) string {
 	return fmt.Sprintf("%s_addr_%08X", name, addr)
 }
 

@@ -1,4 +1,4 @@
-package main
+package csym
 
 import (
 	"fmt"
@@ -8,8 +8,8 @@ import (
 	"github.com/sanctuary/sym/internal/c"
 )
 
-// parseTypes parses the SYM types into the equivalent C types.
-func (p *parser) parseTypes(syms []*sym.Symbol) {
+// ParseTypes parses the SYM types into the equivalent C types.
+func (p *Parser) ParseTypes(syms []*sym.Symbol) {
 	p.initTaggedTypes(syms)
 	// Parse symbols.
 	for i := 0; i < len(syms); i++ {
@@ -41,7 +41,7 @@ func (p *parser) parseTypes(syms []*sym.Symbol) {
 }
 
 // initTaggedTypes adds scaffolding types for structs, unions and enums.
-func (p *parser) initTaggedTypes(syms []*sym.Symbol) {
+func (p *Parser) initTaggedTypes(syms []*sym.Symbol) {
 	// Bool used for NULL type.
 	boolDef := &c.VarDecl{
 		Class: c.Typedef,
@@ -50,14 +50,14 @@ func (p *parser) initTaggedTypes(syms []*sym.Symbol) {
 			Name: "bool",
 		},
 	}
-	p.types["bool"] = boolDef
+	p.Types["bool"] = boolDef
 	// Add scaffolding types for structs, unions and enums, so they may be
 	// referrenced before defined.
 	vtblPtrType := &c.StructType{
 		Tag: "__vtbl_ptr_type",
 	}
-	p.structs["__vtbl_ptr_type"] = vtblPtrType
-	p.structTags = append(p.structTags, "__vtbl_ptr_type")
+	p.Structs["__vtbl_ptr_type"] = vtblPtrType
+	p.StructTags = append(p.StructTags, "__vtbl_ptr_type")
 	var (
 		structTags = make(map[string]bool)
 		unionTags  = make(map[string]bool)
@@ -74,30 +74,30 @@ func (p *parser) initTaggedTypes(syms []*sym.Symbol) {
 					Size: body.Size,
 					Tag:  tag,
 				}
-				p.structs[tag] = t
-				p.structTags = append(p.structTags, tag)
+				p.Structs[tag] = t
+				p.StructTags = append(p.StructTags, tag)
 			case sym.ClassUNTAG:
 				tag = uniqueTag(tag, unionTags)
 				t := &c.UnionType{
 					Size: body.Size,
 					Tag:  tag,
 				}
-				p.unions[tag] = t
-				p.unionTags = append(p.unionTags, tag)
+				p.Unions[tag] = t
+				p.UnionTags = append(p.UnionTags, tag)
 			case sym.ClassENTAG:
 				tag = uniqueTag(tag, enumTags)
 				t := &c.EnumType{
 					Tag: tag,
 				}
-				p.enums[tag] = t
-				p.enumTags = append(p.enumTags, tag)
+				p.Enums[tag] = t
+				p.EnumTags = append(p.EnumTags, tag)
 			}
 		}
 	}
 }
 
 // parseStructTag parses a struct tag sequence of symbols.
-func (p *parser) parseStructTag(body *sym.Def, syms []*sym.Symbol) (n int) {
+func (p *Parser) parseStructTag(body *sym.Def, syms []*sym.Symbol) (n int) {
 	if base := body.Type.Base(); base != sym.BaseStruct {
 		panic(fmt.Errorf("support for base type %q not yet implemented", base))
 	}
@@ -155,7 +155,7 @@ func (p *parser) parseStructTag(body *sym.Def, syms []*sym.Symbol) (n int) {
 }
 
 // parseUnionTag parses a union tag sequence of symbols.
-func (p *parser) parseUnionTag(body *sym.Def, syms []*sym.Symbol) (n int) {
+func (p *Parser) parseUnionTag(body *sym.Def, syms []*sym.Symbol) (n int) {
 	if base := body.Type.Base(); base != sym.BaseUnion {
 		panic(fmt.Errorf("support for base type %q not yet implemented", base))
 	}
@@ -202,7 +202,7 @@ func (p *parser) parseUnionTag(body *sym.Def, syms []*sym.Symbol) (n int) {
 }
 
 // parseEnumTag parses an enum tag sequence of symbols.
-func (p *parser) parseEnumTag(body *sym.Def, syms []*sym.Symbol) (n int) {
+func (p *Parser) parseEnumTag(body *sym.Def, syms []*sym.Symbol) (n int) {
 	if base := body.Type.Base(); base != sym.BaseEnum {
 		panic(fmt.Errorf("support for base type %q not yet implemented", base))
 	}
@@ -237,7 +237,7 @@ func (p *parser) parseEnumTag(body *sym.Def, syms []*sym.Symbol) (n int) {
 }
 
 // parseTypedef parses a typedef symbol.
-func (p *parser) parseTypedef(t sym.Type, dims []uint32, tag, name string) {
+func (p *Parser) parseTypedef(t sym.Type, dims []uint32, tag, name string) {
 	name = validName(name)
 	def := &c.VarDecl{
 		Class: c.Typedef,
@@ -246,8 +246,8 @@ func (p *parser) parseTypedef(t sym.Type, dims []uint32, tag, name string) {
 			Name: name,
 		},
 	}
-	p.typedefs = append(p.typedefs, def)
-	p.types[name] = def
+	p.Typedefs = append(p.Typedefs, def)
+	p.Types[name] = def
 }
 
 // ### [ Helper functions ] ####################################################
@@ -281,10 +281,10 @@ func uniqueEnum(name string, members map[string]bool) string {
 }
 
 // findStruct returns the struct with the given tag and size.
-func findStruct(p *parser, tag string, size uint32) *c.StructType {
+func findStruct(p *Parser, tag string, size uint32) *c.StructType {
 	newTag := tag
 	for i := 0; ; i++ {
-		t, ok := p.structs[newTag]
+		t, ok := p.Structs[newTag]
 		if !ok {
 			panic(fmt.Errorf("unable to locate struct %q", tag))
 		}
@@ -296,10 +296,10 @@ func findStruct(p *parser, tag string, size uint32) *c.StructType {
 }
 
 // findUnion returns the union with the given tag and size.
-func findUnion(p *parser, tag string, size uint32) *c.UnionType {
+func findUnion(p *Parser, tag string, size uint32) *c.UnionType {
 	newTag := tag
 	for i := 0; ; i++ {
-		t, ok := p.unions[newTag]
+		t, ok := p.Unions[newTag]
 		if !ok {
 			panic(fmt.Errorf("unable to locate union %q", tag))
 		}
@@ -311,10 +311,10 @@ func findUnion(p *parser, tag string, size uint32) *c.UnionType {
 }
 
 // findEnum returns the enum with the given tag.
-func findEnum(p *parser, tag string) *c.EnumType {
+func findEnum(p *Parser, tag string) *c.EnumType {
 	newTag := tag
 	for i := 0; ; i++ {
-		t, ok := p.enums[newTag]
+		t, ok := p.Enums[newTag]
 		if !ok {
 			panic(fmt.Errorf("unable to locate enum %q", tag))
 		}
@@ -326,17 +326,17 @@ func findEnum(p *parser, tag string) *c.EnumType {
 }
 
 // parseType parses the SYM type into the equivalent C type.
-func (p *parser) parseType(t sym.Type, dims []uint32, tag string) c.Type {
+func (p *Parser) parseType(t sym.Type, dims []uint32, tag string) c.Type {
 	u := p.parseBase(t.Base(), tag)
 	return parseMods(u, t.Mods(), dims)
 }
 
 // parseBase parses the SYM base type into the equivalent C type.
-func (p *parser) parseBase(base sym.Base, tag string) c.Type {
+func (p *Parser) parseBase(base sym.Base, tag string) c.Type {
 	tag = validName(tag)
 	switch base {
 	case sym.BaseNull:
-		return p.types["bool"]
+		return p.Types["bool"]
 	case sym.BaseVoid:
 		return c.Void
 	case sym.BaseChar:
@@ -348,19 +348,19 @@ func (p *parser) parseBase(base sym.Base, tag string) c.Type {
 	case sym.BaseLong:
 		return c.Long
 	case sym.BaseStruct:
-		t, ok := p.structs[tag]
+		t, ok := p.Structs[tag]
 		if !ok {
 			panic(fmt.Errorf("unable to locate struct %q", tag))
 		}
 		return t
 	case sym.BaseUnion:
-		t, ok := p.unions[tag]
+		t, ok := p.Unions[tag]
 		if !ok {
 			panic(fmt.Errorf("unable to locate union %q", tag))
 		}
 		return t
 	case sym.BaseEnum:
-		t, ok := p.enums[tag]
+		t, ok := p.Enums[tag]
 		if !ok {
 			panic(fmt.Errorf("unable to locate enum %q", tag))
 		}

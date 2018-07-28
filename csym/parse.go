@@ -1,29 +1,30 @@
-package main
+// Package csym translates Playstation 1 symbol information to C declarations.
+package csym
 
 import (
 	"github.com/sanctuary/sym/internal/c"
 )
 
-// parser tracks type information used for parsing.
-type parser struct {
+// Parser tracks type information used for parsing.
+type Parser struct {
 	// Type information.
 
 	// structs maps from struct tag to struct type.
-	structs map[string]*c.StructType
+	Structs map[string]*c.StructType
 	// unions maps from union tag to union type.
-	unions map[string]*c.UnionType
+	Unions map[string]*c.UnionType
 	// enums maps from enum tag to enum type.
-	enums map[string]*c.EnumType
+	Enums map[string]*c.EnumType
 	// types maps from type name to underlying type definition.
-	types map[string]c.Type
+	Types map[string]c.Type
 	// Struct tags in order of occurrence in SYM file.
-	structTags []string
+	StructTags []string
 	// Union tags in order of occurrence in SYM file.
-	unionTags []string
+	UnionTags []string
 	// Enum tags in order of occurrence in SYM file.
-	enumTags []string
+	EnumTags []string
 	// Type definitions in order of occurrence in SYM file.
-	typedefs []c.Type
+	Typedefs []c.Type
 	// Tracks unique enum member names.
 	enumMembers map[string]bool
 
@@ -31,7 +32,7 @@ type parser struct {
 	*Overlay // default binary
 
 	// Overlays.
-	overlays []*Overlay
+	Overlays []*Overlay
 	// overlayIDs maps from overlay ID to overlay.
 	overlayIDs map[uint32]*Overlay
 
@@ -39,17 +40,17 @@ type parser struct {
 	curOverlay *Overlay
 }
 
-// newParser returns a new parser.
-func newParser() *parser {
+// NewParser returns a new parser.
+func NewParser() *Parser {
 	overlay := &Overlay{
 		varNames:  make(map[string]*c.VarDecl),
 		funcNames: make(map[string]*c.FuncDecl),
 	}
-	return &parser{
-		structs:     make(map[string]*c.StructType),
-		unions:      make(map[string]*c.UnionType),
-		enums:       make(map[string]*c.EnumType),
-		types:       make(map[string]c.Type),
+	return &Parser{
+		Structs:     make(map[string]*c.StructType),
+		Unions:      make(map[string]*c.UnionType),
+		Enums:       make(map[string]*c.EnumType),
+		Types:       make(map[string]c.Type),
 		enumMembers: make(map[string]bool),
 		Overlay:     overlay,
 		overlayIDs:  make(map[uint32]*Overlay),
@@ -67,9 +68,9 @@ type Overlay struct {
 	Length uint32
 
 	// Variable delcarations.
-	vars []*c.VarDecl
+	Vars []*c.VarDecl
 	// Function delcarations.
-	funcs []*c.FuncDecl
+	Funcs []*c.FuncDecl
 	// varNames maps from variable name to variable declaration.
 	varNames map[string]*c.VarDecl
 	// funcNames maps from function name to function declaration.
@@ -78,7 +79,7 @@ type Overlay struct {
 	// Symbols.
 	symbols []*Symbol
 	// Source file line numbers.
-	lines []*Line
+	Lines []*Line
 }
 
 // A Symbol associates a symbol name with an address.
