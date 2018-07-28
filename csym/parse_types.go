@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/sanctuary/sym"
-	"github.com/sanctuary/sym/internal/c"
+	"github.com/sanctuary/sym/csym/c"
 )
 
 // ParseTypes parses the SYM types into the equivalent C types.

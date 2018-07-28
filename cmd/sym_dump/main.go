@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sanctuary/sym"
 	"github.com/sanctuary/sym/csym"
-	"github.com/sanctuary/sym/internal/c"
+	"github.com/sanctuary/sym/csym/c"
 )
 
 // usage prints usage information.
