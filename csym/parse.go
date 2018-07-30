@@ -77,7 +77,7 @@ type Overlay struct {
 	funcNames map[string]*c.FuncDecl
 
 	// Symbols.
-	symbols []*Symbol
+	Symbols []*Symbol
 	// Source file line numbers.
 	Lines []*Line
 }

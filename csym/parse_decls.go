@@ -63,7 +63,7 @@ func (p *Parser) parseSymbol(addr uint32, name string) {
 		Addr: addr,
 		Name: name,
 	}
-	p.curOverlay.symbols = append(p.curOverlay.symbols, symbol)
+	p.curOverlay.Symbols = append(p.curOverlay.Symbols, symbol)
 }
 
 // parseLineNumbers parses a line numbers sequence of symbols.
