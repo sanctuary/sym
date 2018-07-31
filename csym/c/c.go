@@ -63,6 +63,8 @@ const (
 
 // A FuncDecl is a function declaration.
 type FuncDecl struct {
+	// Source file.
+	Path string
 	// Address (optional).
 	Addr uint32
 	// Size (optional).

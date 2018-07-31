@@ -143,6 +143,7 @@ func (p *Parser) parseFunc(addr uint32, body *sym.FuncStart, syms []*sym.Symbol)
 			}
 		}
 	}
+	f.Path = body.Path
 	// Parse function declaration.
 	f.LineStart = body.Line
 	curLine := Line{
