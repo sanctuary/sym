@@ -78,7 +78,16 @@ func (t *StructType) Def() string {
 		}
 		fmt.Fprintf(buf, "\t%s;\n", field)
 	}
-	// TODO: Print methods.
+	// TODO: Figure out how to print methods in a good way; for now, commented
+	// out.
+	for _, method := range t.Methods {
+		if method.Size > 0 {
+			fmt.Fprintf(buf, "\t// offset: %04X (%d bytes)\n", method.Offset, method.Size)
+		} else if len(t.Fields) > 1 && t.Fields[1].Offset > 0 {
+			fmt.Fprintf(buf, "\t// offset: %04X\n", method.Offset)
+		}
+		fmt.Fprintf(buf, "\t// %s;\n", method)
+	}
 	buf.WriteString("}")
 	return buf.String()
 }

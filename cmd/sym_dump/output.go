@@ -311,10 +311,6 @@ func getSourceFiles(p *csym.Parser) []*SourceFile {
 	// sources maps from source path to source file.
 	sources := make(map[string]*SourceFile)
 	for _, overlay := range overlays {
-		srcPathFromAddr := make(map[uint32]string)
-		for _, line := range overlay.Lines {
-			srcPathFromAddr[line.Addr] = line.Path
-		}
 		for _, v := range overlay.Vars {
 			srcPath := fmt.Sprintf("global_%x.cpp", overlay.ID)
 			src, ok := sources[srcPath]
@@ -327,10 +323,7 @@ func getSourceFiles(p *csym.Parser) []*SourceFile {
 			src.vars = append(src.vars, v)
 		}
 		for _, f := range overlay.Funcs {
-			srcPath, ok := srcPathFromAddr[f.Addr]
-			if !ok {
-				panic(fmt.Errorf("unable to locate source file of function %q at address 0x%08X", f.Name, f.Addr))
-			}
+			srcPath := f.Path
 			src, ok := sources[srcPath]
 			if !ok {
 				src = &SourceFile{
