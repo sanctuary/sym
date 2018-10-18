@@ -4,25 +4,27 @@ package sym
 
 import "strconv"
 
-const _Kind_name = "1280828486888a8c8e90929496overlayset overlay"
+const _Kind_name = "125680828486888a8c8e90929496overlayset overlay"
 
 var _Kind_map = map[Kind]string{
 	1:   _Kind_name[0:1],
 	2:   _Kind_name[1:2],
-	128: _Kind_name[2:4],
-	130: _Kind_name[4:6],
-	132: _Kind_name[6:8],
-	134: _Kind_name[8:10],
-	136: _Kind_name[10:12],
-	138: _Kind_name[12:14],
-	140: _Kind_name[14:16],
-	142: _Kind_name[16:18],
-	144: _Kind_name[18:20],
-	146: _Kind_name[20:22],
-	148: _Kind_name[22:24],
-	150: _Kind_name[24:26],
-	152: _Kind_name[26:33],
-	154: _Kind_name[33:44],
+	5:   _Kind_name[2:3],
+	6:   _Kind_name[3:4],
+	128: _Kind_name[4:6],
+	130: _Kind_name[6:8],
+	132: _Kind_name[8:10],
+	134: _Kind_name[10:12],
+	136: _Kind_name[12:14],
+	138: _Kind_name[14:16],
+	140: _Kind_name[16:18],
+	142: _Kind_name[18:20],
+	144: _Kind_name[20:22],
+	146: _Kind_name[22:24],
+	148: _Kind_name[24:26],
+	150: _Kind_name[26:28],
+	152: _Kind_name[28:35],
+	154: _Kind_name[35:46],
 }
 
 func (i Kind) String() string {

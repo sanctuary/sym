@@ -9,6 +9,8 @@ type Kind uint8
 const (
 	KindName1      Kind = 0x01 // 1
 	KindName2      Kind = 0x02 // 2
+	KindName5      Kind = 0x05 // 5
+	KindName6      Kind = 0x06 // 6
 	KindIncSLD     Kind = 0x80 // 80
 	KindIncSLDByte Kind = 0x82 // 82
 	KindIncSLDWord Kind = 0x84 // 84

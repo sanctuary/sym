@@ -91,6 +91,10 @@ func parseSymbolBody(r io.Reader, kind Kind) (SymbolBody, error) {
 		return parse(&Name1{})
 	case KindName2:
 		return parse(&Name2{})
+	case KindName5:
+		return parse(&Name2{})
+	case KindName6:
+		return parse(&Name2{})
 	case KindIncSLD:
 		// empty body.
 		return &IncSLD{}, nil
@@ -170,6 +174,52 @@ func (body *Name2) String() string {
 
 // BodySize returns the size of the symbol body in bytes.
 func (body *Name2) BodySize() int {
+	return 1 + int(body.NameLen)
+}
+
+// --- [ 0x05 ] ----------------------------------------------------------------
+
+// A Name5 symbol specifies the name of a symbol.
+//
+// Value of the symbol header specifies the associated address.
+type Name5 struct {
+	// Name length.
+	NameLen uint8 `struc:"uint8,sizeof=Name"`
+	// Symbol name,
+	Name string
+}
+
+// String returns the string representation of the name symbol.
+func (body *Name5) String() string {
+	// $00000000 5 m
+	return body.Name
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *Name5) BodySize() int {
+	return 1 + int(body.NameLen)
+}
+
+// --- [ 0x06 ] ----------------------------------------------------------------
+
+// A Name6 symbol specifies the name of a symbol.
+//
+// Value of the symbol header specifies the associated address.
+type Name6 struct {
+	// Name length.
+	NameLen uint8 `struc:"uint8,sizeof=Name"`
+	// Symbol name,
+	Name string
+}
+
+// String returns the string representation of the name symbol.
+func (body *Name6) String() string {
+	// $00010604 6 DoTitle
+	return body.Name
+}
+
+// BodySize returns the size of the symbol body in bytes.
+func (body *Name6) BodySize() int {
 	return 1 + int(body.NameLen)
 }
 
