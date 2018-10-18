@@ -9,13 +9,14 @@ const (
 	_Class_name_1 = "LABEL"
 	_Class_name_2 = "MOSARGSTRTAGMOUUNTAGTPDEF"
 	_Class_name_3 = "ENTAGMOEREGPARMFIELD"
-	_Class_name_4 = "EOS"
+	_Class_name_4 = "EOS103"
 )
 
 var (
 	_Class_index_0 = [...]uint8{0, 4, 7, 11, 14}
 	_Class_index_2 = [...]uint8{0, 3, 6, 12, 15, 20, 25}
 	_Class_index_3 = [...]uint8{0, 5, 8, 15, 20}
+	_Class_index_4 = [...]uint8{0, 3, 6}
 )
 
 func (i Class) String() string {
@@ -31,8 +32,9 @@ func (i Class) String() string {
 	case 15 <= i && i <= 18:
 		i -= 15
 		return _Class_name_3[_Class_index_3[i]:_Class_index_3[i+1]]
-	case i == 102:
-		return _Class_name_4
+	case 102 <= i && i <= 103:
+		i -= 102
+		return _Class_name_4[_Class_index_4[i]:_Class_index_4[i+1]]
 	default:
 		return "Class(" + strconv.FormatInt(int64(i), 10) + ")"
 	}

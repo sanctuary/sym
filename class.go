@@ -39,4 +39,5 @@ const (
 	ClassFIELD Class = 0x0012 // FIELD
 	// End of symbol.
 	ClassEOS Class = 0x0066 // EOS
+	Class103 Class = 0x0067 // 103
 )

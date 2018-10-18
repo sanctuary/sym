@@ -58,6 +58,16 @@ func (p *Parser) initTaggedTypes(syms []*sym.Symbol) {
 	}
 	p.Structs["__vtbl_ptr_type"] = vtblPtrType
 	p.StructTags = append(p.StructTags, "__vtbl_ptr_type")
+	physadrType := &c.StructType{
+		Tag: "_physadr",
+	}
+	p.Structs["_physadr"] = physadrType
+	p.StructTags = append(p.StructTags, "_physadr")
+	lightingType := &c.StructType{
+		Tag: "LIGHTNING_STRUCT",
+	}
+	p.Structs["LIGHTNING_STRUCT"] = lightingType
+	p.StructTags = append(p.StructTags, "LIGHTNING_STRUCT")
 	var (
 		structTags = make(map[string]bool)
 		unionTags  = make(map[string]bool)

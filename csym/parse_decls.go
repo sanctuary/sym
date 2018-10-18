@@ -2,6 +2,7 @@ package csym
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/sanctuary/sym"
 	"github.com/sanctuary/sym/csym/c"
@@ -27,7 +28,7 @@ func (p *Parser) ParseDecls(syms []*sym.Symbol) {
 			case sym.ClassEXT, sym.ClassSTAT:
 				t := p.parseType(body.Type, nil, "")
 				p.parseGlobalDecl(s.Hdr.Value, body.Size, body.Class, t, body.Name)
-			case sym.ClassMOS, sym.ClassSTRTAG, sym.ClassMOU, sym.ClassUNTAG, sym.ClassTPDEF, sym.ClassENTAG, sym.ClassMOE, sym.ClassFIELD:
+			case sym.ClassMOS, sym.ClassSTRTAG, sym.ClassMOU, sym.ClassUNTAG, sym.ClassTPDEF, sym.ClassENTAG, sym.ClassMOE, sym.ClassFIELD, sym.Class103:
 				// nothing to do.
 			default:
 				panic(fmt.Sprintf("support for symbol class %q not yet implemented", body.Class))
@@ -296,7 +297,8 @@ func findFunc(p *Parser, name string, addr uint32) (*c.FuncDecl, *c.FuncType) {
 	name = validName(name)
 	f, ok := p.curOverlay.funcNames[name]
 	if !ok {
-		panic(fmt.Errorf("unable to locate function %q", name))
+		log.Printf("unable to locate function %q", name)
+		return &c.FuncDecl{Var: c.Var{Name: name, Type: &c.FuncType{RetType: c.Void}}}, &c.FuncType{RetType: c.Void}
 	}
 	if f.Addr != addr {
 		name = UniqueName(name, addr)
