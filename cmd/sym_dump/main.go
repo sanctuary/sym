@@ -142,8 +142,10 @@ func pruneDuplicates(ps []*csym.Parser, skipAddrCheck bool) *csym.Parser {
 			}
 			if !enumPresent[s] {
 				if !fake {
-					tag = fmt.Sprintf("%s_dup_%d", tag, pnum)
-					t.Tag = tag
+					if _, ok := dst.Enums[tag]; ok {
+						tag = fmt.Sprintf("%s_dup_%d", tag, pnum)
+						t.Tag = tag
+					}
 				}
 				dst.Enums[tag] = t
 				dst.EnumTags = append(dst.EnumTags, tag)
