@@ -95,6 +95,8 @@ func (f *FuncDecl) Def() string {
 	if f.Size > 0 {
 		fmt.Fprintf(buf, "// size: 0x%X\n", f.Size)
 	}
+	fmt.Fprintf(buf, "// line start: %d\n", f.LineStart)
+	fmt.Fprintf(buf, "// line end:   %d\n", f.LineEnd)
 	if len(f.Blocks) == 0 {
 		fmt.Fprintf(buf, "%s;", f.Var)
 		return buf.String()
