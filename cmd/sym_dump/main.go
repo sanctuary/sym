@@ -100,8 +100,9 @@ func main() {
 	}
 	// Output the merge of all files if in merge mode.
 	if merge {
-		skipAddrCheck := true
-		p := pruneDuplicates(ps, skipAddrCheck)
+		skipAddrDiff := true
+		skipLineDiff := true
+		p := pruneDuplicates(ps, skipAddrDiff, skipLineDiff)
 		if err := dump(p, outputDir, outputC, outputTypes, outputIDA, splitSrc, merge); err != nil {
 			log.Fatalf("%+v", err)
 		}
@@ -110,7 +111,7 @@ func main() {
 
 // pruneDuplicates prunes duplicates declarations of the parser, optionally
 // ignoring differences in address.
-func pruneDuplicates(ps []*csym.Parser, skipAddrCheck bool) *csym.Parser {
+func pruneDuplicates(ps []*csym.Parser, skipAddrDiff, skipLineDiff bool) *csym.Parser {
 	dst := csym.NewParser()
 	enumPresent := make(map[string]bool)
 	structPresent := make(map[string]bool)
@@ -211,6 +212,7 @@ func pruneDuplicates(ps []*csym.Parser, skipAddrCheck bool) *csym.Parser {
 			typeDefPresent[s] = true
 		}
 	}
+
 	// Sort types by tag.
 	sort.Strings(dst.EnumTags)
 	sort.Strings(dst.StructTags)
@@ -221,6 +223,87 @@ func pruneDuplicates(ps []*csym.Parser, skipAddrCheck bool) *csym.Parser {
 		return ti.Name < tj.Name
 	}
 	sort.Slice(dst.Typedefs, less)
+
+	varDeclPresent := make(map[string]bool)
+	funcDeclPresent := make(map[string]bool)
+	dstOverlays := make(map[uint32]*csym.Overlay)
+	for _, p := range ps {
+		// Add unique declarations of each overlay.
+		overlays := append(p.Overlays, p.Overlay)
+		for _, overlay := range overlays {
+			curOverlay, ok := dstOverlays[overlay.ID]
+			if !ok {
+				curOverlay = &csym.Overlay{
+					ID: overlay.ID,
+				}
+				dstOverlays[overlay.ID] = curOverlay
+				if overlay.ID == p.Overlay.ID {
+					if len(dst.Overlay.Vars) > 0 {
+						panic("unreachable") // I hope :)
+					}
+					dst.Overlay = curOverlay
+				} else {
+					dst.Overlays = append(dst.Overlays, curOverlay)
+				}
+			}
+			// Add unique variable declarations.
+			for _, v := range overlay.Vars {
+				origAddr := v.Addr
+				if skipAddrDiff {
+					v.Addr = 0
+				}
+				s := v.Def()
+				if skipAddrDiff {
+					v.Addr = origAddr
+				}
+				if !varDeclPresent[s] {
+					curOverlay.Vars = append(curOverlay.Vars, v)
+				}
+				varDeclPresent[s] = true
+			}
+			// Add unique function declarations.
+			for _, f := range overlay.Funcs {
+				origAddr := f.Addr
+				origLineStart := f.LineStart
+				origLineEnd := f.LineEnd
+				if skipAddrDiff {
+					f.Addr = 0
+				}
+				if skipLineDiff {
+					f.LineStart = 0
+					f.LineEnd = 0
+				}
+				s := f.Def()
+				if skipAddrDiff {
+					f.Addr = origAddr
+				}
+				if skipLineDiff {
+					f.LineStart = origLineStart
+					f.LineEnd = origLineEnd
+				}
+				if !funcDeclPresent[s] {
+					curOverlay.Funcs = append(curOverlay.Funcs, f)
+				}
+				funcDeclPresent[s] = true
+			}
+		}
+	}
+
+	// Sort variable and function declarations by name.
+	overlays := append(dst.Overlays, dst.Overlay)
+	for _, overlay := range overlays {
+		// Sort variable declarations.
+		less := func(i, j int) bool {
+			return overlay.Vars[i].Name < overlay.Vars[j].Name
+		}
+		sort.Slice(overlay.Vars, less)
+		// Sort function declarations.
+		less = func(i, j int) bool {
+			return overlay.Funcs[i].Name < overlay.Funcs[j].Name
+		}
+		sort.Slice(overlay.Funcs, less)
+	}
+
 	return dst
 }
 
