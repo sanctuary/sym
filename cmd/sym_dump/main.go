@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/rickypai/natsort"
 	"github.com/sanctuary/sym"
 	"github.com/sanctuary/sym/csym"
 	"github.com/sanctuary/sym/csym/c"
@@ -214,13 +215,13 @@ func pruneDuplicates(ps []*csym.Parser, skipAddrDiff, skipLineDiff bool) *csym.P
 	}
 
 	// Sort types by tag.
-	sort.Strings(dst.EnumTags)
-	sort.Strings(dst.StructTags)
-	sort.Strings(dst.UnionTags)
+	natsort.Strings(dst.EnumTags)
+	natsort.Strings(dst.StructTags)
+	natsort.Strings(dst.UnionTags)
 	less := func(i, j int) bool {
 		ti := dst.Typedefs[i].(*c.VarDecl)
 		tj := dst.Typedefs[j].(*c.VarDecl)
-		return ti.Name < tj.Name
+		return natsort.Less(ti.Name, tj.Name)
 	}
 	sort.Slice(dst.Typedefs, less)
 
@@ -294,12 +295,12 @@ func pruneDuplicates(ps []*csym.Parser, skipAddrDiff, skipLineDiff bool) *csym.P
 	for _, overlay := range overlays {
 		// Sort variable declarations.
 		less := func(i, j int) bool {
-			return overlay.Vars[i].Name < overlay.Vars[j].Name
+			return natsort.Less(overlay.Vars[i].Name, overlay.Vars[j].Name)
 		}
 		sort.Slice(overlay.Vars, less)
 		// Sort function declarations.
 		less = func(i, j int) bool {
-			return overlay.Funcs[i].Name < overlay.Funcs[j].Name
+			return natsort.Less(overlay.Funcs[i].Name, overlay.Funcs[j].Name)
 		}
 		sort.Slice(overlay.Funcs, less)
 	}

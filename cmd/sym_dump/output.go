@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/rickypai/natsort"
 	"github.com/sanctuary/sym/csym"
 	"github.com/sanctuary/sym/csym/c"
 )
@@ -339,7 +340,7 @@ func getSourceFiles(p *csym.Parser) []*SourceFile {
 		srcs = append(srcs, src)
 	}
 	less := func(i, j int) bool {
-		return srcs[i].Path < srcs[j].Path
+		return natsort.Less(srcs[i].Path, srcs[j].Path)
 	}
 	sort.Slice(srcs, less)
 	return srcs
