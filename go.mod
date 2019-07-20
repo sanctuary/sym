@@ -5,3 +5,5 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/rickypai/natsort v0.0.0-20180124032556-f194e6bd5b0c
 )
+
+go 1.13

@@ -258,13 +258,51 @@ func dumpIDAOverlay(overlay *csym.Overlay, outputDir string) error {
 		return errors.Wrapf(err, "unable to create declarations IDA script %q", identsPath)
 	}
 	defer w.Close()
+	// track addresses already assigned an identifier.
+	addrs := make(map[uint32]bool)
 	for _, f := range overlay.Funcs {
+		addrs[f.Addr] = true
 		if _, err := fmt.Fprintf(w, "set_name(0x%08X, %q, SN_NOWARN)\n", f.Addr, f.Name); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 	for _, v := range overlay.Vars {
+		addrs[v.Addr] = true
 		if _, err := fmt.Fprintf(w, "set_name(0x%08X, %q, SN_NOWARN)\n", v.Addr, v.Name); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	// add identifiers for which type information is unknown.
+loop:
+	for _, sym := range overlay.Symbols {
+		// check prefix of symbol name.
+		switch {
+		case strings.HasPrefix(sym.Name, "_"):
+			// check suffix of symbol name.
+			switch {
+			case strings.HasSuffix(sym.Name, "_size"):
+				// skip
+				continue loop
+			case strings.HasSuffix(sym.Name, "_objend"),
+				strings.HasSuffix(sym.Name, "_orgend"),
+				strings.HasSuffix(sym.Name, "_obj"),
+				strings.HasSuffix(sym.Name, "_org"):
+				// add comment and skip
+				if _, err := fmt.Fprintf(w, "MakeComm(0x%08X, %q)\n", sym.Addr, sym.Name); err != nil {
+					return errors.WithStack(err)
+				}
+				continue loop
+			}
+		case strings.HasPrefix(sym.Name, "LNK_"):
+			// skip
+			continue loop
+		}
+		if _, ok := addrs[sym.Addr]; ok {
+			// skip, ident with given address already present.
+			continue
+		}
+		addrs[sym.Addr] = true
+		if _, err := fmt.Fprintf(w, "set_name(0x%08X, %q, SN_NOWARN)\n", sym.Addr, sym.Name); err != nil {
 			return errors.WithStack(err)
 		}
 	}
