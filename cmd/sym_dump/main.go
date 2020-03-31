@@ -73,6 +73,18 @@ func main() {
 				ps = append(ps, p)
 			}
 			p.ParseTypes(f.Syms)
+
+			// Add overlay 0 for Biohazard 2 (beta 2).
+			const (
+				overlayZeroAddr = 0x0
+				overlayZeroSize = 987136
+			)
+			overlayZero := &sym.Overlay{
+				Length: overlayZeroSize,
+				ID:     0,
+			}
+			p.ParseOverlay(overlayZeroAddr, overlayZero)
+
 			p.ParseDecls(f.Syms)
 			// Output once for each files if not in merge mode.
 			if !merge {

@@ -45,7 +45,7 @@ func (p *Parser) ParseDecls(syms []*sym.Symbol) {
 				panic(fmt.Sprintf("support for symbol class %q not yet implemented", body.Class))
 			}
 		case *sym.Overlay:
-			p.parseOverlay(s.Hdr.Value, body)
+			p.ParseOverlay(s.Hdr.Value, body)
 		case *sym.SetOverlay:
 			overlay, ok := p.overlayIDs[s.Hdr.Value]
 			if !ok {
@@ -278,8 +278,8 @@ func (p *Parser) parseGlobalDecl(addr, size uint32, class sym.Class, t c.Type, n
 	p.curOverlay.varNames[name] = v
 }
 
-// parseOverlay parses an overlay symbol.
-func (p *Parser) parseOverlay(addr uint32, body *sym.Overlay) {
+// ParseOverlay parses an overlay symbol.
+func (p *Parser) ParseOverlay(addr uint32, body *sym.Overlay) {
 	overlay := &Overlay{
 		Addr:      addr,
 		ID:        body.ID,
