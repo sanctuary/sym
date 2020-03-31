@@ -19,6 +19,8 @@ func (p *Parser) ParseDecls(syms []*sym.Symbol) {
 		case *sym.SetSLD2:
 			n := p.parseLineNumbers(s.Hdr.Value, body, syms[i+1:])
 			i += n
+		case *sym.EndSLD:
+			i++
 		case *sym.FuncStart:
 			n := p.parseFunc(s.Hdr.Value, body, syms[i+1:])
 			i += n
