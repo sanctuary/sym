@@ -42,7 +42,8 @@ func (p *Parser) ParseTypes(syms []*sym.Symbol) {
 
 // initTaggedTypes adds scaffolding types for structs, unions and enums.
 func (p *Parser) initTaggedTypes(syms []*sym.Symbol) {
-	// Bool used for NULL type.
+	// Psy-Q SDK outputs several types including bool as NULL, most likely
+	// the object was a bool so assume that.
 	boolDef := &c.VarDecl{
 		Class: c.Typedef,
 		Var: c.Var{
