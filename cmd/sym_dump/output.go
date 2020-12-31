@@ -288,7 +288,7 @@ loop:
 				strings.HasSuffix(sym.Name, "_obj"),
 				strings.HasSuffix(sym.Name, "_org"):
 				// add comment and skip
-				if _, err := fmt.Fprintf(w, "MakeComm(0x%08X, %q)\n", sym.Addr, sym.Name); err != nil {
+				if _, err := fmt.Fprintf(w, "set_cmt(0x%08X, %q, 0)\n", sym.Addr, sym.Name); err != nil {
 					return errors.WithStack(err)
 				}
 				continue loop

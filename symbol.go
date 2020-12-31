@@ -377,7 +377,7 @@ type FuncStart struct {
 
 // String returns the string representation of the function start symbol.
 func (body *FuncStart) String() string {
-	// $8001fefc 8c Function_start
+	// $8001fefc 8c Function start
 	//    fp = 29
 	//    fsize = 24
 	//    retreg = 31
@@ -386,7 +386,7 @@ func (body *FuncStart) String() string {
 	//    line = 88
 	//    file = C:\DIABPSX\GLIBDEV\SOURCE\TASKER.C
 	//    name = DoEpi
-	const format = `Function_start
+	const format = `Function start
     fp = %d
     fsize = %d
     retreg = %d
@@ -415,8 +415,8 @@ type FuncEnd struct {
 
 // String returns the string representation of the function end symbol.
 func (body *FuncEnd) String() string {
-	// $8001ff4c 8e Function_end   line 91
-	return fmt.Sprintf("Function_end   line %d", body.Line)
+	// $8001ff4c 8e Function end   line 91
+	return fmt.Sprintf("Function end   line %d", body.Line)
 }
 
 // BodySize returns the size of the symbol body in bytes.
@@ -436,8 +436,8 @@ type BlockStart struct {
 
 // String returns the string representation of the block start symbol.
 func (body *BlockStart) String() string {
-	// $8003017c 90 Block_start  line = 1
-	return fmt.Sprintf("Block_start  line = %d", body.Line)
+	// $8003017c 90 Block start  line = 1
+	return fmt.Sprintf("Block start  line = %d", body.Line)
 }
 
 // BodySize returns the size of the symbol body in bytes.
@@ -457,8 +457,8 @@ type BlockEnd struct {
 
 // String returns the string representation of the block end symbol.
 func (body *BlockEnd) String() string {
-	// $800301ac 92 Block_end  line = 4
-	return fmt.Sprintf("Block_end  line = %d", body.Line)
+	// $800301ac 92 Block end  line = 4
+	return fmt.Sprintf("Block end  line = %d", body.Line)
 }
 
 // BodySize returns the size of the symbol body in bytes.
