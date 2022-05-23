@@ -8,7 +8,9 @@ Parse Playstation 1 symbol files (`*.SYM`).
 ## Installation
 
 ```bash
-go get -u github.com/sanctuary/sym/cmd/sym_dump
+git clone https://github.com/sanctuary/sym
+cd sym
+go install -v ./cmd/sym_dump
 ```
 
 ## Usage
